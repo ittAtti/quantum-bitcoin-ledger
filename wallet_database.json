@@ -1,0 +1,19 @@
+{
+  "wallets": {
+    "+1234567890": {
+      "wallet_address": "1BitcoinSimWalletAddress",
+      "balance": 0.0275,
+      "last_updated": "2025-06-12T00:56:49.915091",
+      "transactions": [
+        {
+          "txid": "tx001",
+          "from": "externalWalletXYZ",
+          "to": "1BitcoinSimWalletAddress",
+          "amount": 0.0275,
+          "timestamp": "2025-06-12T00:56:49.915091",
+          "confirmed": true
+        }
+      ]
+    }
+  }
+}
