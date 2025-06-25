@@ -1,0 +1,4 @@
+description: "A simple, clean, dark-themed SVG world map. The continents should be filled with a dark gray color (#333) and the background should be transparent. The style should be modern and slightly stylized, suitable for a tech dashboard."
+transparent: true
+aspect: landscape
+
