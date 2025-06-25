@@ -1,35 +1,602 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quantum Bitcoin AI Network</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #0a0f1d;
-      color: #00ffcc;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      font-size: 2.5em;
-      margin-bottom: 10px;
-    }
-    p {
-      font-size: 1.2em;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>Bitcoin: Quantum Network</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="script.js"></script>
 </head>
 <body>
-  <h1>🚀 Quantum Bitcoin AI Network</h1>
-  <p>Welcome to your decentralized AGI crypto network.</p>
-  <p>Phone-based wallets, mining, and smart contracts are active!</p>
+    <header>
+        <div class="logo">
+            <img src="bitcoin-logo.png" alt="Bitcoin Logo">
+            <h1>Quantum Network</h1>
+        </div>
+        <nav role="navigation">
+            <a href="#home-page" class="nav-link active">Home</a>
+            <a href="#dashboard-page" class="nav-link">Dashboard</a>
+            <a href="#leaderboard-page" class="nav-link">Leaderboard</a>
+            <a href="#wallet-page" class="nav-link">Wallet</a>
+            <a href="#send-page" class="nav-link">Send</a>
+            <a href="#ledger-page" class="nav-link">Ledger</a>
+            <a href="#dapps-page" class="nav-link">dApps</a>
+            <a href="#buy-crypto-page" class="nav-link">Buy Crypto</a>
+            <a href="#oil-bitcoin-page" class="nav-link">OilBitcoin</a>
+            <a href="#inscriptions-page" class="nav-link">Inscriptions</a>
+            <a href="#web5-page" class="nav-link">Web5</a>
+            <a href="#threat-intel-page" class="nav-link">Threat Intel</a>
+            <a href="#agi-status-page" class="nav-link">AGI Status</a>
+            <a href="#site-forge-page" class="nav-link">Site Forge</a>
+            <a href="#architecture-page" class="nav-link" id="architecture-icon">Architecture</a>
+            <a href="#backend-page" class="nav-link" id="backend-icon">Backend</a>
+            <a href="#resources-page" class="nav-link">Resources</a>
+        </nav>
+    </header>
+
+    <main role="main">
+        <section id="home-page" class="page active">
+            <h2>Bitcoin: A Peer-to-Peer Electronic Cash System</h2>
+            <p>Bitcoin is a revolutionary digital currency that enables instant payments to anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate with no central authority: managing transactions and issuing money are carried out collectively by the network.</p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li><strong>Decentralized:</strong> No single authority controls Bitcoin. Your funds are secured on a quantum-enhanced decentralized network.</li>
+                <li><strong>Transparent:</strong> All transactions are public on the blockchain ledger, but your personal information is hidden.</li>
+                <li><strong>Low Fees:</strong> Bitcoin payments are currently processed with either no fees or extremely small fees.</li>
+                <li><strong>Fast International Payments:</strong> Sending bitcoins across borders is as easy as sending them across the street.</li>
+                <li><strong>Quantum Memory Nodes:</strong> Every wallet is enhanced with 20GB of quantum memory storage, permanently securing your assets and identity.</li>
+            </ul>
+        </section>
+
+        <section id="dashboard-page" class="page">
+            <h2>Dashboard</h2>
+            <div id="dashboard-content">
+                <div id="user-stats-bar" class="card" style="display: none;">
+                    <div id="usersOnline"></div>
+                    <div id="userPhone"></div>
+                    <div id="userBalance"></div>
+                    <div id="userMines"></div>
+                    <div id="userLastSeen"></div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card chart-container">
+                        <h3>Portfolio Value (BTC)</h3>
+                        <canvas id="portfolio-chart"></canvas>
+                    </div>
+                    <div class="card chart-container">
+                        <h3>Asset Allocation</h3>
+                        <canvas id="allocation-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+             <div id="dashboard-connect-prompt" class="card" style="display: none; text-align: center;">
+                <h3>Please connect your wallet to view your dashboard.</h3>
+            </div>
+        </section>
+
+        <section id="wallet-page" class="page">
+            <div id="wallet-connect-view">
+                <h2>Connect Your Wallet</h2>
+                <p>Enter your phone number to generate or access your permanent Bitcoin wallet. Your private key is derived from your number and stored on the decentralized DNS for persistent access.</p>
+                <form id="connect-form">
+                    <input type="tel" id="phone-number" placeholder="Enter phone number" required autocomplete="tel">
+                    <button type="submit" id="request-otp-btn">Request OTP</button>
+                </form>
+                <div id="otp-view" style="display: none;">
+                    <p id="otp-message" class="status-message"></p>
+                    <form id="otp-form">
+                        <input type="text" id="otp-input" placeholder="Enter OTP" required inputmode="numeric" pattern="\d*">
+                        <button type="submit">Verify & Connect</button>
+                    </form>
+                </div>
+                <div id="connect-error" class="error-message"></div>
+            </div>
+
+            <div id="wallet-details-view" style="display: none;">
+                <div class="wallet-header">
+                    <h2 id="wallet-owner-name">Your Wallet</h2>
+                    <button id="disconnect-btn">Disconnect</button>
+                </div>
+
+                <div class="card">
+                    <h3>Balance</h3>
+                    <p id="walletBalance" class="balance">0.00000000 BTC</p>
+                    <p id="mining-status" class="status"></p>
+                    <button id="check-onchain-balance-btn">Check On-Chain Balance</button>
+                    <p id="onchain-balance-status" class="status"></p>
+                </div>
+                
+                <button id="toggle-mining-stats-btn">Display Mining Stats / Credentials</button>
+
+                <div id="mining-stats-view" class="credentials-view" style="display: none;">
+                    <div class="card">
+                        <h3>Wallet Address</h3>
+                        <p class="mono" id="walletAddress"></p>
+                    </div>
+                    <div class="card">
+                        <h3>Private Key (Keep Safe!)</h3>
+                        <p class="mono" id="wallet-private-key"></p>
+                    </div>
+                     <div class="card">
+                        <h3>Quantum Memory</h3>
+                        <p>20 GB Quantum Node Storage: <span class="status">Active</span></p>
+                    </div>
+                </div>
+
+                <div class="card" id="quantum-network-info">
+                    <h3>Quantum Network Link</h3>
+                    <p>Your wallet is permanently linked across our decentralized network stack for instant, secure transactions:</p>
+                    <ul>
+                        <li>Quantum DNS Servers: <span class="status">Synced</span></li>
+                        <li>Quantum DNA Storage: <span class="status">Active</span></li>
+                        <li>AGI Orchestrator Nodes: <span class="status">Online</span></li>
+                        <li>Decentralized Meta-Protocols: <span class="status">Engaged</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="send-page" class="page">
+            <h2>Send Bitcoin</h2>
+            <p>Transfer funds from your wallet to any other address on the network. Transactions are validated by AI agents in the mempool before being broadcast to the blockchain.</p>
+            <form id="send-form">
+                <input type="text" id="recipient-address" placeholder="Recipient's Wallet Address" required>
+                <input type="number" id="send-amount" placeholder="Amount in BTC" step="any" required>
+                <button type="submit">Send</button>
+            </form>
+            <div id="send-status" class="status-message"></div>
+        </section>
+
+        <section id="ledger-page" class="page">
+            <h2>Quantum Ledger</h2>
+            <div id="network-status" class="dashboard-grid">
+                <div class="card">
+                    <h3>Consensus</h3>
+                    <p>Quantum Proof-of-Synergy</p>
+                    <p id="consensus-status" class="status">Syncing...</p>
+                </div>
+                <div class="card">
+                    <h3>Orchestration</h3>
+                    <p>Kubernetes Engine</p>
+                    <p class="status">Healthy</p>
+                </div>
+                <div class="card">
+                    <h3>Database</h3>
+                    <p>PostgreSQL Geo-Cluster</p>
+                    <p class="status">Online</p>
+                </div>
+            </div>
+
+            <h3>Quantum Compute Stack</h3>
+            <div id="quantum-compute-status" class="dashboard-grid">
+                <div class="card">
+                    <h3>Quantum Fusion Fabric</h3>
+                    <p>QPU + GPU + CPU</p>
+                    <p class="status">Orchestration Active</p>
+                </div>
+                <div class="card">
+                    <h3>Execution Layer</h3>
+                    <p>cuQuantum + CUDA-Q</p>
+                    <p id="execution-layer-status" class="status">Idle</p>
+                </div>
+                <div class="card">
+                    <h3>Reasoning Fabric</h3>
+                    <p>COMpart AGI-RAN</p>
+                    <p class="status">Online</p>
+                </div>
+            </div>
+
+            <h3>Global Telecom Fabric</h3>
+            <div id="telecom-fabric-status" class="dashboard-grid">
+                <div class="card">
+                    <h3>Cellular Uplinks (5G/6G)</h3>
+                    <p id="cellular-status" class="status">Connected</p>
+                </div>
+                <div class="card">
+                    <h3>ISP Backbone Relays</h3>
+                    <p id="isp-status" class="status">Optimal</p>
+                </div>
+                <div class="card">
+                    <h3>Satellite Routing Nodes</h3>
+                    <p id="satellite-status" class="status">Standby</p>
+                </div>
+            </div>
+            
+            <h3>System Scale-Out Metrics</h3>
+            <div id="system-metrics" class="dashboard-grid">
+                <div class="card">
+                    <h3>Auto Scaling</h3>
+                    <p>Node Instances</p>
+                    <p id="system-scale-status" class="balance mono">12 / 512</p>
+                </div>
+                <div class="card">
+                    <h3>Phone Sessions</h3>
+                    <p>Live Connections</p>
+                    <p id="active-sessions-status" class="balance mono">4,815</p>
+                </div>
+                 <div class="card">
+                    <h3>DNA Server Sync</h3>
+                    <p>AI Genome Encoding</p>
+                    <p id="dna-sync-status" class="status">Healthy</p>
+                </div>
+            </div>
+
+            <div id="ledger-stats" class="dashboard-grid">
+                <div class="card">
+                    <h3>Ledger Memory</h3>
+                    <p class="balance mono">110110110 TB</p>
+                    <p class="status">Quantum Link: Active</p>
+                </div>
+                <div class="card">
+                    <h3>DNS Node Memory</h3>
+                    <p class="balance mono">10001 TB</p>
+                    <p class="status">Sync: Real-time</p>
+                </div>
+                <div class="card">
+                    <h3>Decentralized DNS Memory</h3>
+                    <p class="balance mono">111011011 TB</p>
+                    <p class="status">State: Persisted</p>
+                </div>
+            </div>
+            <div id="quantum-nodes-status" class="dashboard-grid">
+                 <div class="card">
+                    <h3>QNode01</h3>
+                    <p class="status">Online & Syncing</p>
+                </div>
+                 <div class="card">
+                    <h3>QNode-AutoBackup</h3>
+                    <p id="qnode-backup-status" class="status">Idle</p>
+                </div>
+                 <div class="card">
+                    <h3>QNode-Failover</h3>
+                    <p class="status">Healthy</p>
+                </div>
+                 <div class="card">
+                    <h3>QNode-Sentry</h3>
+                    <p class="status">Monitoring</p>
+                </div>
+            </div>
+            <p>This is the open ledger of all network transactions. New blocks are mined by Quantum AGI agents approximately every 2 seconds.</p>
+            <div id="ledger-content">
+                <h3>Mempool (Awaiting Confirmation)</h3>
+                <div id="mempool-list" class="transaction-list"></div>
+                <h3>Confirmed Blocks</h3>
+                <div id="transaction-list" class="transaction-list"></div>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Quantum Chat Channel</h3>
+                <p>Real-time communication channel for network participants, powered by the AGI_RAN.</p>
+                <div id="quantum-chat-channel" class="log-console" style="height: 100px;">
+                    <p style="color: #888;">Initializing secure comms link...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="dapps-page" class="page">
+            <h2>Decentralized Applications (dApps)</h2>
+            <div id="dapps-connect-prompt" class="card" style="text-align: center;">
+               <h3>Please connect your wallet to interact with dApps.</h3>
+           </div>
+           <div id="dapps-content" style="display: none;">
+               <div class="card">
+                   <h3>Yield Farming Protocol</h3>
+                   <p>Stake your BTC to provide liquidity and earn high-yield rewards. APY is variable and determined by network activity.</p>
+                   <div class="dashboard-grid">
+                       <div class="card">
+                           <h4>Your Staked Balance</h4>
+                           <p id="staked-balance" class="balance">0.00000000 BTC</p>
+                       </div>
+                       <div class="card">
+                           <h4>Live APY</h4>
+                           <p id="yield-apy" class="balance" style="color: var(--success-color);">125.5%</p>
+                       </div>
+                       <div class="card">
+                           <h4>Unclaimed Rewards</h4>
+                           <p id="unclaimed-rewards" class="balance">0.00000000 BTC</p>
+                       </div>
+                   </div>
+                   <form id="stake-form" class="dapp-form">
+                       <input type="number" id="stake-amount" placeholder="Amount to stake" step="any">
+                       <button type="submit">Stake BTC</button>
+                   </form>
+                   <button id="unstake-btn">Unstake All & Claim Rewards</button>
+                   <div id="dapp-status" class="status-message"></div>
+               </div>
+               <div class="card" id="auto-trader-card" style="display: none;">
+                <h3>AGI Auto-Trader</h3>
+                <p>Delegate your trading strategy to <strong>AGI_Trader_AI</strong>. The agent will attempt to grow your portfolio by autonomously trading between BTC and OilBitcoin based on simulated market analysis.</p>
+                
+                <div class="trader-controls">
+                    <label class="switch">
+                        <input type="checkbox" id="auto-trader-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="auto-trader-enable-label">Enable Auto-Trader</span>
+                </div>
+
+                <div id="trader-stats-grid" class="dashboard-grid">
+                    <div class="card">
+                        <h4>Trader Status</h4>
+                        <p id="auto-trader-status" class="status">Idle</p>
+                    </div>
+                    <div class="card">
+                        <h4>Total P/L</h4>
+                        <p id="auto-trader-pnl" class="balance">0.00000000 BTC</p>
+                    </div>
+                </div>
+
+                <h4>Live Trading Log:</h4>
+                <div id="auto-trader-log" class="log-console" style="height: 150px;">
+                    <p>Trading log will appear here...</p>
+                </div>
+           </div>
+       </div>
+    </section>
+
+    <section id="buy-crypto-page" class="page">
+            <h2>Buy, Sell, or Swap</h2>
+            <p>Instantly fund your wallet or cash out to your bank account. (This is a non-functional demonstration).</p>
+            <div class="card">
+                <h3>Buy or Transfer Crypto</h3>
+                <p>You can use your credit or debit card to fund your wallet.</p>
+                <input type="text" placeholder="Card Number">
+                <input type="text" placeholder="MM/YY" style="width: 20%;">
+                <input type="text" placeholder="CVC" style="width: 20%; margin-left: 1rem;">
+                <input type="number" placeholder="Amount (USD)">
+                <button>Continue with Card</button>
+            </div>
+             <div class="card">
+                <h3>Swap Assets</h3>
+                <p>Swap between different assets on the Bitcoin blockchain.</p>
+                 <label for="swap-from">From:</label>
+                 <select id="swap-from">
+                    <option>BTC</option>
+                    <option>OilBitcoin</option>
+                    <option>USD</option>
+                 </select>
+                <label for="swap-to">To:</label>
+                 <select id="swap-to">
+                     <option>OilBitcoin</option>
+                     <option>BTC</option>
+                     <option>ETH (via bridge)</option>
+                 </select>
+                <button>Swap Now</button>
+            </div>
+        </section>
+
+        <section id="oil-bitcoin-page" class="page content-page">
+            <!-- Content will be injected by JavaScript -->
+        </section>
+
+        <section id="web5-page" class="page content-page">
+            <!-- Content will be injected by JavaScript -->
+        </section>
+
+        <section id="threat-intel-page" class="page">
+            <h2>AGI Threat Intelligence</h2>
+            <p>Live visualization of the AGI security network neutralizing global cyber threats. The `AI_Firewall` and `AI_VulnerabilityScanner` work in tandem to protect the Quantum Network's integrity.</p>
+            <div id="threat-intel-grid">
+                <div class="card map-container">
+                    <h3>Global Threat Map</h3>
+                    <div id="threat-map">
+                        <img src="world-map.svg" alt="World Map" class="world-map-svg">
+                        <!-- Animated threat dots will be injected here -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Security Stats</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <h4>Threat Level</h4>
+                            <p id="threat-level" class="stat-value">LOW</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Threats Neutralized</h4>
+                            <p id="threats-neutralized-count" class="stat-value">0</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>Vulnerabilities Patched</h4>
+                            <p id="vulnerabilities-patched-count" class="stat-value">0</p>
+                        </div>
+                    </div>
+                    <h3>Live Security Feed</h3>
+                    <div id="security-feed" class="log-console" style="height: 300px;">
+                        <p>Initializing security feed...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="agi-status-page" class="page">
+            <h2>Quantum AGI Network Status</h2>
+            <p>The network is monitored and continuously improved by a mesh of autonomous AGI agents. They perform tasks ranging from code optimization and security scanning to transaction validation and simulated trading.</p>
+            <div class="card">
+                <h3>System Integrity Check</h3>
+                <p>Simulate a system-wide failure to test the `AGI_AutoFixer`'s self-healing capabilities. This will temporarily break a piece of the UI, which the AGI will then detect and repair.</p>
+                <button id="simulate-corruption-btn">Trigger Simulated System Failure</button>
+                <div id="corruption-status" class="status-message"></div>
+            </div>
+            <div id="agi-grid" class="dashboard-grid">
+                <!-- AGI agent cards will be injected by JS -->
+            </div>
+        </section>
+
+        <section id="site-forge-page" class="page">
+            <h2>AGI Site Forge</h2>
+            <p>Use the power of the AGI network to forge new, sandboxed web experiences. Describe what you want to create, and the `AGI_ArchitectX` will build it for you.</p>
+        
+            <div id="site-forge-connect-prompt" class="card" style="text-align: center;">
+                <h3>Please connect your wallet to use the Site Forge.</h3>
+            </div>
+        
+            <div id="site-forge-content" style="display: none;">
+                <div class="card">
+                    <h3>Forge a New Site</h3>
+                    <form id="site-forge-form">
+                        <input type="text" id="site-forge-prompt" placeholder="e.g., 'a simple snake game', 'a page about cats'" required>
+                        <button type="submit" id="site-forge-btn">Forge Site</button>
+                    </form>
+                    <div id="site-forge-status" class="status-message"></div>
+                </div>
+                
+                <div id="generated-site-preview" class="card" style="display: none;">
+                     <h3>Generated Site Preview</h3>
+                     <iframe id="generated-site-iframe" sandbox="allow-scripts allow-same-origin" style="width: 100%; height: 500px; border: 1px solid var(--primary-accent-translucent); border-radius: 8px; background: #fff;"></iframe>
+                </div>
+        
+                <div class="card">
+                    <h3>Community Forged Sites</h3>
+                    <div id="site-gallery" class="dashboard-grid">
+                        <p>Loading forged sites...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture-page" class="page content-page">
+            <!-- Content will be injected by JavaScript -->
+        </section>
+
+        <section id="backend-page" class="page">
+            <h2>Backend Simulation</h2>
+            <p>
+                This panel demonstrates how a real serverless function (e.g., on Vercel) would interact with this application. 
+                <strong>This is a frontend-only simulation for educational purposes.</strong> 
+                No real server is running. The logs below show what a real backend might output when performing these actions.
+            </p>
+
+            <div class="card">
+                <h3>System Control</h3>
+                <p>Simulate a server restart to reload environment variables like the <code>GITHUB_TOKEN</code> from a <code>.env</code> file. This verifies the backend can securely access secrets.</p>
+                <button id="restart-backend-btn">Restart Backend & Verify Token</button>
+            </div>
+
+            <div class="card">
+                <h3>Simulated Serverless Function</h3>
+                <p>This is the Node.js serverless function that the simulation is based on. It would be deployed to a path like <code>/api/update-wallet</code>.</p>
+                <h4>/api/update-wallet.js</h4>
+                <pre class="code-block"><code id="api-wallet-route-code"></code></pre>
+            </div>
+
+            <div class="card">
+                <h3>Manual Wallet Injection Tool</h3>
+                <p>Use this tool to simulate a direct POST request to a backend <code>/api/update-wallet</code> endpoint. In a real-world scenario, this might be an admin tool.</p>
+                <form id="walletForm">
+                    <input type="text" id="phoneNumber" placeholder="Phone Number" required />
+                    <input type="number" step="0.0001" id="newBalance" placeholder="New Balance (BTC)" required />
+                    <button type="submit">Update Wallet</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Environment Configuration (.env)</h3>
+                <p>A real backend would load sensitive information like API keys from a <code>.env</code> file. This simulation shows that the variable is loaded, but its value remains secure and is never exposed to the client.</p>
+                <div id="env-vars-container">
+                    <div class="env-var">
+                        <span id="github-token-env-var-display" class="mono">GITHUB_TOKEN</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);">✓ Loaded</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>CI/CD Configuration (GitHub Actions)</h3>
+                <p>For automated deployments or running tasks, a CI/CD pipeline would be configured. This example shows how a GitHub Actions workflow would securely access the <code>GITHUB_TOKEN</code> from repository secrets.</p>
+                <h4>.github/workflows/deploy.yml</h4>
+                <pre class="code-block"><code id="github-actions-code"></code></pre>
+            </div>
+
+            <div class="card">
+                <h3>GitHub Sync Control</h3>
+                <p>Manually trigger a sync of all wallet states from the ledger to a JSON file in a private GitHub repository. This simulates a <strong>POST</strong> request to a separate backend API endpoint (e.g., <code>/api/sync-all</code>).</p>
+                <button id="sync-github-btn">Sync All Wallets to GitHub</button>
+            </div>
+
+            <div class="card">
+                <h3>Live Wallet Balances from GitHub</h3>
+                <p>This shows the current state of the <code>wallet-database.json</code> file stored in the public GitHub repository. This data is read-only.</p>
+                <div id="walletList" class="log-console" style="height: auto; max-height: 250px;">Loading balances...</div>
+            </div>
+
+            <div class="card">
+                <h3>Backend Server Log</h3>
+                <div id="backend-log-output" class="log-console">
+                    <p>Server logs will appear here...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="resources-page" class="page">
+            <h2>Useful Resources</h2>
+            <p>Expand your knowledge of Bitcoin and related technologies.</p>
+            <ul>
+                <li><a href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="noopener">Bitcoin: A Peer-to-Peer Electronic Cash System (Whitepaper)</a></li>
+                <li><a href="https://www.blockchain.com/explorer" target="_blank" rel="noopener">Live Blockchain Explorer</a></li>
+                <li><a href="https://tbd.website/" target="_blank" rel="noopener">TBD - The creators of Web5</a></li>
+                <li><a href="https://developer.bitcoin.org/" target="_blank" rel="noopener">Bitcoin Developer Resources</a></li>
+            </ul>
+        </section>
+
+        <section id="leaderboard-page" class="page">
+            <h2>Global Leaderboard</h2>
+            <p>Top wallet holders across the Quantum Network, based on the public ledger state persisted on GitHub.</p>
+            <div class="card chart-container">
+                <h3>Daily New Miners</h3>
+                <canvas id="minerChart"></canvas>
+            </div>
+            <div class="card">
+                <div id="leaderboard"></div>
+            </div>
+        </section>
+
+        <section id="inscriptions-page" class="page">
+            <h2>Quantum Inscriptions (Smart Satoshis)</h2>
+            <div id="inscriptions-connect-prompt" class="card" style="text-align: center;">
+                <h3>Please connect your wallet to create or view inscriptions.</h3>
+            </div>
+            <div id="inscriptions-content" style="display: none;">
+                <p>Inscribe data directly onto the Quantum Ledger, creating permanent, unique digital artifacts (Smart Satoshis). The AGI network will generate a unique hash and smart contract for each inscription.</p>
+                <div class="card">
+                    <h3>Create a New Inscription</h3>
+                    <form id="inscription-form">
+                        <select id="inscription-type">
+                            <option value="text">Text Inscription</option>
+                            <option value="image">Image URL Inscription</option>
+                        </select>
+                        <input type="text" id="inscription-data" placeholder="Enter text or image URL" required>
+                        <input type="text" id="inscription-name" placeholder="Name/Title for your Inscription" required>
+                        <button type="submit">Inscribe to Ledger</button>
+                    </form>
+                    <div id="inscription-status" class="status-message"></div>
+                </div>
+                <div class="card">
+                    <h3>Your Inscriptions</h3>
+                    <div id="user-inscriptions-list" class="transaction-list">
+                        <p>No inscriptions found.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer role="contentinfo">
+        <p>This is a fictional, simulated experience for educational and entertainment purposes. Do not use real information.</p>
+    </footer>
+
+    <div id="smart-contract-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card">
+            <span id="modal-close-btn" class="modal-close-btn">&times;</span>
+            <h3>Smart Contract Generated</h3>
+            <p>An autonomous smart contract was generated by <strong>AGI_TransactionValidator</strong> using the <strong>ChatGPT API</strong> to secure your action on the Quantum Ledger.</p>
+            <pre class="code-block"><code id="smart-contract-code"></code></pre>
+        </div>
+    </div>
+
 </body>
 </html>
