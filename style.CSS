@@ -663,6 +663,45 @@ input:checked + .slider:before {
     }
 }
 
+.threat-dot.neutralized {
+    animation: neutralizeThreat 0.5s forwards;
+}
+
+@keyframes neutralizeThreat {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+}
+
+.neutralization-ripple {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 2px solid var(--neutralization-ripple-color, var(--success-color));
+    animation: ripple-effect var(--neutralization-ripple-duration, 1s) forwards;
+    pointer-events: none;
+}
+
+@keyframes ripple-effect {
+    from {
+        width: 0;
+        height: 0;
+        opacity: 1;
+    }
+    to {
+        width: var(--neutralization-ripple-size, 100px);
+        height: var(--neutralization-ripple-size, 100px);
+        opacity: 0;
+    }
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
