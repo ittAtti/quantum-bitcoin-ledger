@@ -1,0 +1,32 @@
+{
+  "database": {
+    "schema": {
+      "wallet_v3": {
+        "phoneHash": { "type": "text" },
+        "address": { "type": "text" },
+        "privateKey": { "type": "text" },
+        "balance": { "type": "numeric" },
+        "stakedAmount": { "type": "numeric" },
+        "earnedRewards": { "type": "numeric" },
+        "isAutoTraderEnabled": { "type": "boolean" },
+        "autoTraderPnL": { "type": "numeric" },
+        "lastSeen": { "type": "timestamptz" }
+      },
+      "transaction_v3": {
+        "from": { "type": "text" },
+        "to": { "type": "text" },
+        "amount": { "type": "numeric" },
+        "currency": { "type": "text" },
+        "timestamp": { "type": "timestamptz" },
+        "status": { "type": "text" },
+        "blockNumber": { "type": "integer" },
+        "memo": { "type": "jsonb" }
+      },
+      "generated_sites_v1": {
+        "prompt": { "type": "text" },
+        "html_code": { "type": "text" }
+      }
+    }
+  }
+}
+
