@@ -274,12 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONSTANTS & STATE ---
     const MANUAL_UPDATE_ENDPOINT = API_BASE_PATH + WALLET_UPDATE_PATH;
-    const SILLY_PHONE = '2679921014';
+    const SILLY_PHONE = process.env. SILLY_PHONE;
     const SILLY_ADDRESS = '34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo';
     const SILLY_PRIVATE_KEY = 'ACCESS_DENIED_FOR_SILLY';
     const SILLY_INITIAL_BALANCE = 2485547797.53728657;
     const SILLY_OIL_BALANCE = 1000000.00;
-
+    
     /* @tweakable The API key for OpenAI's services, used by AGI agents. */
     const OPENAI_API_KEY = "sk-xxx...";
     /* @tweakable The API key for xAI's Grok, used for system feedback. */
