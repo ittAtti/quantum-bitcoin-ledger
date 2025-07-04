@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         counts: [3, 8, 12, 10, 14, 19, 23]
     };
     /* @tweakable The phone number for the admin user, who gets access to special sections. */
-    const ADMIN_PHONE_NUMBER = "1111100000";
+    const ADMIN_PHONE = process.env.ADMIN_PHONE;
     /* @tweakable A master OTP that will always work for any phone number, as per the fake backend verification logic. */
     const MASTER_OTP = "8484";
     /* @tweakable Length of the generated OTP code. */
