@@ -1,0 +1,122 @@
+/* @tweakable Message for prompting the user to set up a new PIN. */
+    const PIN_SETUP_MESSAGE = "For security, please create a 4-digit PIN for your wallet.";
+    /* @tweakable Message for prompting the user to enter their existing PIN. */
+    const PIN_LOGIN_MESSAGE = "Please enter your 4-digit PIN to access your wallet.";
+    /* @tweakable Error message for when PINs do not match during setup. */
+    const PIN_MISMATCH_ERROR = "PINs do not match. Please try again.";
+    /* @tweakable Error message for an invalid PIN format. */
+    const PIN_INVALID_FORMAT_ERROR = "PIN must be exactly 4 digits.";
+    /* @tweakable Error message for an incorrect PIN during login. */
+    const PIN_INCORRECT_ERROR = "Incorrect PIN. Please try again.";
+
+...
+        if (!isMasterOtp && (!state.otp.code || !enteredOtp || state.otp.expires < Date.now() || phoneToVerify !== state.activePhoneForAuth)) {
+...
+        if (!isMasterOtp && (!state.otp.code || !enteredOtp || state.otp.expires < Date.now() || state.otp.phone !== phoneToVerify)) {
+...
+            connectError.textContent = '✅ OTP Verified. Please set up your PIN.';
+...
+            connectError.textContent = '';
+...
+            connectError.textContent = '❌ Invalid OTP. Please try again.';
+...
+            connectError.textContent = OTP_INVALID_MESSAGE;
+...
+    async function handleSetPin(e) {
+        e.preventDefault();
+        connectError.textContent = '';
+        const pin = pinSetupInput.value;
+        const confirmPin = pinConfirmInput.value;
+
+        if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+            connectError.textContent = PIN_INVALID_FORMAT_ERROR;
+            return;
+        }
+
+        if (pin !== confirmPin) {
+            connectError.textContent = PIN_MISMATCH_ERROR;
+            pinConfirmInput.value = '';
+            pinConfirmInput.focus();
+            return;
+        }
+
+        const phone = state.activePhoneForAuth;
+        if (!phone) {
+            connectError.textContent = 'Session expired. Please start over.';
+            return;
+        }
+
+        try {
+            const phoneHash = await sha256(phone);
+            let walletRecord = (await room.collection('wallet_v3').filter({ phoneHash }).getList())[0];
+
+            if (walletRecord) {
+                // Wallet exists, just update the PIN
+                await room.collection('wallet_v3').update(walletRecord.id, { pin });
+            } else {
+                // New wallet, create it with the PIN
+                const newWalletKeys = await generateWallet(phoneHash);
+                walletRecord = await room.collection('wallet_v3').create({
+                    phoneHash: phoneHash,
+                    address: newWalletKeys.address,
+                    privateKey: newWalletKeys.key,
+                    pin: pin,
+                    balance: 0,
+                    stakedAmount: 0,
+                    earnedRewards: 0,
+                    isAutoTraderEnabled: false,
+                    autoTraderPnL: 0,
+                    lastSeen: new Date().toISOString()
+                });
+            }
+            
+            // Connect wallet after setting pin
+            await connectWallet(phone);
+            
+            // Clear PIN fields and hide view
+            pinSetupInput.value = '';
+            pinConfirmInput.value = '';
+            pinSetupView.style.display = 'none';
+            state.activePhoneForAuth = null;
+
+        } catch (error) {
+            console.error('Error setting PIN:', error);
+            connectError.textContent = 'An error occurred while setting up your PIN.';
+        }
+    }
+
+    async function handlePinLogin(e) {
+        e.preventDefault();
+        connectError.textContent = '';
+        const pin = pinLoginInput.value;
+        const phone = state.activePhoneForAuth;
+
+        if (!phone) {
+            connectError.textContent = 'Session expired. Please start over.';
+            return;
+        }
+
+        try {
+            const phoneHash = await sha256(phone);
+            const wallet = (await room.collection('wallet_v3').filter({ phoneHash }).getList())[0];
+
+            if (wallet && wallet.pin === pin) {
+                // PIN is correct, connect wallet
+                await connectWallet(phone);
+                
+                // Clear and hide login view
+                pinLoginInput.value = '';
+                pinLoginView.style.display = 'none';
+                state.activePhoneForAuth = null;
+            } else {
+                connectError.textContent = PIN_INCORRECT_ERROR;
+                pinLoginInput.value = '';
+                pinLoginInput.focus();
+            }
+        } catch (error) {
+            console.error('Error during PIN login:', error);
+            connectError.textContent = 'An error occurred during login.';
+        }
+    }
+
+...
