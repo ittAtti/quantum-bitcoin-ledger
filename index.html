@@ -12,7 +12,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script defer src="script.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "@websim/websim-socket": "https://esm.websim.com/@websim/websim-socket"
+      }
+    }
+  </script>
+    <script type="module" src="script.js"></script>
 </head>
 <body>
     <header>
@@ -96,6 +103,26 @@
                         <button type="submit">Verify & Connect</button>
                     </form>
                 </div>
+                
+                <!-- NEW PIN SETUP VIEW -->
+                <div id="pin-setup-view" style="display: none;">
+                    <p id="pin-setup-message" class="status-message">For security, please create a 4-digit PIN for your wallet.</p>
+                    <form id="pin-setup-form">
+                        <input type="password" id="pin-setup-input" placeholder="Enter 4-digit PIN" required maxlength="4" inputmode="numeric" pattern="\d{4}">
+                        <input type="password" id="pin-confirm-input" placeholder="Confirm 4-digit PIN" required maxlength="4" inputmode="numeric" pattern="\d{4}">
+                        <button type="submit">Set PIN & Access Wallet</button>
+                    </form>
+                </div>
+
+                <!-- NEW PIN LOGIN VIEW -->
+                <div id="pin-login-view" style="display: none;">
+                    <p id="pin-login-message" class="status-message">Please enter your 4-digit PIN to access your wallet.</p>
+                    <form id="pin-login-form">
+                        <input type="password" id="pin-login-input" placeholder="Enter 4-digit PIN" required maxlength="4" inputmode="numeric" pattern="\d{4}">
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
+                
                 <div id="connect-error" class="error-message"></div>
             </div>
 
@@ -486,6 +513,13 @@
             </div>
 
             <div class="card">
+                <h3>Simulated Express Server (server.js)</h3>
+                <p>This shows the main Node.js Express server file that would handle routing and environment variables.</p>
+                <h4>/server.js</h4>
+                <pre class="code-block"><code id="express-server-code"></code></pre>
+            </div>
+
+            <div class="card">
                 <h3>Manual Wallet Injection Tool</h3>
                 <p>Use this tool to simulate a direct POST request to a backend <code>/api/update-wallet</code> endpoint. In a real-world scenario, this might be an admin tool.</p>
                 <form id="walletForm">
@@ -561,7 +595,7 @@
                 <h3>Please connect your wallet to create or view inscriptions.</h3>
             </div>
             <div id="inscriptions-content" style="display: none;">
-                <p>Inscribe data directly onto the Quantum Ledger, creating permanent, unique digital artifacts (Smart Satoshis). The AGI network will generate a unique hash and smart contract for each inscription.</p>
+                <p>Inscribe data (text, images, audio, etc.) directly onto the Quantum Ledger, creating permanent, unique digital artifacts called Smart Satoshis. Each Satoshi is given a unique identifier, creating a new form of digital collectibility. The AGI network will generate a unique hash and smart contract for each inscription.</p>
                 <div class="card">
                     <h3>Create a New Inscription</h3>
                     <form id="inscription-form">
