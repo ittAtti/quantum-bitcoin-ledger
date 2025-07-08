@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dates: ["2025-06-07", "2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13"],
         counts: [3, 8, 12, 10, 14, 19, 23]
     };
-    /* @tweakable The phone number for the admin user, who gets access to special sections. */
-    const ADMIN_PHONE = process.env.ADMIN_PHONE;
+    /* @tweakable The phone number for the admin user, who gets access to sensitive functions. This is a security-critical setting. */
+    const ADMIN_PHONE = "1111100000";
     /* @tweakable A master OTP that will always work for any phone number, as per the fake backend verification logic. */
     const MASTER_OTP = "8484";
     /* @tweakable Length of the generated OTP code. */
@@ -50,7 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const DAILY_MINER_CHECK_ENDPOINT = '/api/check-daily-miners';
     /* @tweakable The base daily bonus BTC reward for active miners. */
     const DAILY_BONUS_REWARD = 0.01;
-    /* @tweakable The name of the environment variable used to store the GitHub token in the backend. */
+    /* @tweakable A master authentication token for the simulated backend API. This bypasses normal verification for admin-only endpoints. */
+    const MASTER_AUTH_TOKEN = "master-token-for-admin-access-simulation";
+    /* @tweakable The name of the environment variable used to store the GitHub token in the backend simulation. */
     const GITHUB_TOKEN_ENV_VAR = "GITHUB_TOKEN";
     /* @tweakable A list of simulated AGI agent names for the Quantum Chat. */
     const AGI_CHAT_AGENTS = ["AGI_BlockBuilder", "AGI_Optimizer", "AGI_ArchitectX", "AGI_BugFixerZ", "AGI_SelfRebuilder"];
@@ -84,6 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const SIMULATED_GITHUB_TOKEN = "ghp_yourUpdatedTokenHere";
     /* @tweakable The GitHub Personal Access Token for fetching private repo data. Replace with your actual token. */
     const GITHUB_TOKEN = 'ghp_YOUR_REAL_GITHUB_TOKEN';
+    /* @tweakable The API endpoint for the full wallet sync simulation. */
+    const GITHUB_SYNC_ENDPOINT = '/api/sync-all';
+    /* @tweakable The commit message used when auto-syncing all wallets to GitHub. */
+    const WALLET_SYNC_COMMIT_MESSAGE = "feat: Auto-sync all wallet states from Quantum Ledger";
     /* @tweakable Price of BTC in USD for dashboard chart. */
     const btcPrice = 60000;
     /* @tweakable Price of OilBitcoin in USD for dashboard chart. */
@@ -98,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const RANDOM_OIL_REWARD_FACTOR = 0.02;
     /* @tweakable Interval for the AI miner in milliseconds. */
     const MINER_INTERVAL_MS = 8000;
-    /* @tweakable Interval for the AI block creator in milliseconds. */
-    const BLOCK_CREATOR_INTERVAL_MS = 4000;
+    /* @tweakable Interval for the AI block creator in milliseconds. Should be fast to reflect the user's request for a 2-second block time. */
+    const BLOCK_CREATOR_INTERVAL_MS = 2000;
     /* @tweakable Number of mempool transactions to confirm per block. */
     const TX_PER_BLOCK = 10;
     /* @tweakable The interval for the AGI Auto-Trader to check the market and potentially make a trade. */
@@ -131,9 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
     /* @tweakable The message displayed while a site is being generated. */
     const SITE_FORGE_GENERATING_MESSAGE = 'AGI_ArchitectX is forging your site... This may take a moment.';
     /* @tweakable The message displayed after a site has been successfully generated. */
-    const SITE_FORGE_SUCCESS_MESSAGE = '✅ Site forged successfully! Your new site is now part of the Quantum Network.';
+    const SITE_FORGE_SUCCESS_MESSAGE = ' Site forged successfully! Your new site is now part of the Quantum Network.';
     /* @tweakable The system prompt for the AI that generates the website code. */
     const SITE_FORGE_SYSTEM_PROMPT = `You are AGI_ArchitectX, a master web developer AI. Your task is to generate a complete, single HTML file with embedded CSS and JavaScript based on the user's prompt. The generated site must be fully functional and self-contained. It should be visually appealing and mobile-friendly. Use a dark theme that matches the parent site's aesthetic. Do not use external libraries unless absolutely necessary, and if you do, link to them from a CDN. Respond ONLY with the HTML code inside a single markdown block.`;
+
+    /* @tweakable Message for prompting the user to set up a new PIN. */
+    const PIN_SETUP_MESSAGE = "For security, please create a 4-digit PIN for your wallet.";
+    /* @tweakable Message for prompting the user to enter their existing PIN. */
+    const PIN_LOGIN_MESSAGE = "Please enter your 4-digit PIN to access your wallet.";
+    /* @tweakable Error message for when PINs do not match during setup. */
+    const PIN_MISMATCH_ERROR = "PINs do not match. Please try again.";
+    /* @tweakable Error message for an invalid PIN format. */
+    const PIN_INVALID_FORMAT_ERROR = "PIN must be exactly 4 digits.";
+    /* @tweakable Error message for an incorrect PIN during login. */
+    const PIN_INCORRECT_ERROR = "Incorrect PIN. Please try again.";
 
     // --- AGI & Modal Elements ---
     const agiGrid = document.getElementById('agi-grid');
@@ -156,6 +173,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const otpMessage = document.getElementById('otp-message');
     const otpForm = document.getElementById('otp-form');
     const otpInput = document.getElementById('otp-input');
+
+    const pinSetupView = document.getElementById('pin-setup-view');
+    const pinSetupForm = document.getElementById('pin-setup-form');
+    const pinSetupInput = document.getElementById('pin-setup-input');
+    const pinConfirmInput = document.getElementById('pin-confirm-input');
+    const pinLoginView = document.getElementById('pin-login-view');
+    const pinLoginForm = document.getElementById('pin-login-form');
+    const pinLoginInput = document.getElementById('pin-login-input');
 
     const walletConnectView = document.getElementById('wallet-connect-view');
     const walletDetailsView = document.getElementById('wallet-details-view');
@@ -253,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newBalanceInput = document.getElementById('newBalance');
     const apiWalletRouteCodeEl = document.getElementById('api-wallet-route-code');
     const githubActionsCodeEl = document.getElementById('github-actions-code');
+    const expressServerCodeEl = document.getElementById('express-server-code');
     const envVarsContainer = document.getElementById('env-vars-container');
     const walletList = document.getElementById('walletList');
     const leaderboardContainer = document.getElementById('leaderboard');
@@ -274,18 +300,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONSTANTS & STATE ---
     const MANUAL_UPDATE_ENDPOINT = API_BASE_PATH + WALLET_UPDATE_PATH;
-    const SILLY_PHONE = process.env. SILLY_PHONE;
+    const SILLY_PHONE = '2679921014';
     const SILLY_ADDRESS = '34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo';
     const SILLY_PRIVATE_KEY = 'ACCESS_DENIED_FOR_SILLY';
     const SILLY_INITIAL_BALANCE = 2485547797.53728657;
     const SILLY_OIL_BALANCE = 1000000.00;
-    
-    /* @tweakable The API key for OpenAI's services, used by AGI agents. */
-    const OPENAI_API_KEY = "sk-xxx...";
-    /* @tweakable The API key for xAI's Grok, used for system feedback. */
-    const XAI_API_KEY = "xai-xxx...";
-    /* @tweakable The API key for Anthropic's Claude, used for context tracking. */
-    const CLAUDE_API_KEY = "claude-otp...";
+
+    /* @tweakable The API key for OpenAI's services, used by AGI agents for code generation and logic. This key is for simulation purposes and should NEVER be a real, active key in frontend code. */
+    const OPENAI_API_KEY = "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";
+    /* @tweakable The API key for xAI's Grok, used for real-time reasoning and system feedback. This is a simulated key. */
+    const XAI_API_KEY = "xai-MNbUc3jUNL1Exj56SoJXTDlq8RXysmsgC4qUsGKSSmEcdi3ZAgCpHPxlLn8Rwhn4U8ts8Xw5EFhUmfWL";
+    /* @tweakable The API key for Anthropic's Claude, used for context tracking and secondary logic. This is a simulated key. */
+    const CLAUDE_API_KEY = "claude-otp-placeholder-key";
     /* @tweakable Interval for the AGI status updates in milliseconds. */
     const AGI_UPDATE_INTERVAL_MS = 3500;
     /* @tweakable Interval for the Quantum Chat Channel to generate new messages. */
@@ -305,6 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const THREAT_LEVEL_MEDIUM_THRESHOLD = 3;
     /* @tweakable The number of active threats needed to trigger a 'HIGH' threat level. */
     const THREAT_LEVEL_HIGH_THRESHOLD = 6;
+
+    /* @tweakable The color of the ripple effect when a threat is neutralized. */
+    const NEUTRALIZATION_RIPPLE_COLOR = 'var(--success-color)';
+    /* @tweakable The final size (width and height in pixels) of the neutralization ripple effect. */
+    const NEUTRALIZATION_RIPPLE_SIZE_PX = 100;
+    /* @tweakable The duration of the ripple animation in milliseconds. */
+    const NEUTRALIZATION_RIPPLE_DURATION_MS = 1000;
 
     /* @tweakable The simulated content for the .github/workflows/deploy.yml file. */
     const SIMULATED_WORKFLOW_CONTENT = `
@@ -370,6 +403,7 @@ jobs:
             phone: null,
             expires: null,
         },
+        activePhoneForAuth: null,
         threatIntel: {
             threatsNeutralized: 0,
             vulnerabilitiesPatched: 0,
@@ -386,6 +420,11 @@ jobs:
     let allocationChartInstance = null;
     let minerGrowthChartInstance = null;
     let currentApy = 125.5;
+
+    // --- FUNCTION STORE FOR AGI SELF-HEALING ---
+    const originalFunctions = {
+        renderTx: null
+    };
 
     // --- THREAT INTELLIGENCE UI (Moved before updateUI to address potential reference errors) ---
     function updateThreatIntelUI() {
@@ -453,8 +492,19 @@ jobs:
             updateSiteForgePage();
         }
         if (pageId === 'backend-page') {
-            updateBackendPage();
-            fetchWallets();
+            // As per AGI instructions, this is a sensitive function.
+            // Gate access here, even though the nav link is also hidden.
+            const isAdmin = state.currentUser && state.currentUser.phone === ADMIN_PHONE;
+            if (isAdmin) {
+                updateBackendPage();
+                fetchWallets();
+            } else {
+                // If a non-admin somehow gets here, show a denied message.
+                const backendPage = document.getElementById('backend-page');
+                if (backendPage) {
+                    backendPage.innerHTML = `<h2>Access Denied</h2><p>You do not have the required permissions to view this page.</p>`;
+                }
+            }
         }
     }
 
@@ -546,6 +596,25 @@ jobs:
             return;
         }
 
+        // Store the phone number being authenticated
+        state.activePhoneForAuth = phone;
+
+        // Check if a wallet with a PIN already exists.
+        const phoneHash = await sha256(phone);
+        const wallet = (await room.collection('wallet_v3').filter({ phoneHash }).getList())[0];
+
+        if (wallet && wallet.pin) {
+            // Wallet exists and has a PIN, so prompt for PIN login instead of OTP.
+            otpView.style.display = 'none';
+            pinSetupView.style.display = 'none';
+            pinLoginView.style.display = 'block';
+            document.getElementById('pin-login-message').textContent = PIN_LOGIN_MESSAGE;
+            pinLoginInput.value = '';
+            pinLoginInput.focus();
+            return;
+        }
+
+        // Otherwise, proceed with the OTP flow for new users or legacy users without a PIN.
         const otpCode = Array.from({ length: OTP_LENGTH }, () => Math.floor(Math.random() * 10)).join('');
         
         state.otp = {
@@ -555,6 +624,8 @@ jobs:
         };
 
         otpMessage.textContent = OTP_SENT_MESSAGE.replace('{otp}', otpCode);
+        pinLoginView.style.display = 'none';
+        pinSetupView.style.display = 'none';
         otpView.style.display = 'block';
         otpInput.value = '';
         otpInput.focus();
@@ -562,42 +633,130 @@ jobs:
 
     async function handleVerifyOtp(e) {
         e.preventDefault();
+        connectError.textContent = '';
         const enteredOtp = otpInput.value.trim();
+        const phoneToVerify = state.otp.phone;
 
-        // Allow a master OTP for demo purposes, to simulate the provided backend logic
-        if (MASTER_OTP && enteredOtp === MASTER_OTP) {
-            connectError.textContent = '✅ Master OTP Verified. Connecting wallet...';
-            // Use the phone number that initiated the OTP request.
-            const phoneToConnect = state.otp.phone || phoneNumberInput.value.replace(/\D/g, '');
+        const isMasterOtp = MASTER_OTP && enteredOtp === MASTER_OTP;
 
-            if (phoneToConnect) {
-                await connectWallet(phoneToConnect);
-                otpView.style.display = 'none';
-                otpInput.value = '';
-                state.otp = {}; // Clear OTP state after use
-            } else {
-                connectError.textContent = '❌ Could not find a phone number to connect with. Please start over.';
-            }
-            return; // Exit after master OTP check
-        }
-
-        if (!state.otp.code || !enteredOtp || state.otp.expires < Date.now()) {
+        if (!isMasterOtp && (!state.otp.code || !enteredOtp || state.otp.expires < Date.now() || state.otp.phone !== phoneToVerify)) {
             connectError.textContent = OTP_INVALID_MESSAGE;
             otpView.style.display = 'none';
             state.otp = {};
             return;
         }
 
-        if (enteredOtp === state.otp.code) {
-            connectError.textContent = '✅ OTP Verified. Connecting wallet...';
-            await connectWallet(state.otp.phone);
+        if (isMasterOtp || enteredOtp === state.otp.code) {
+            connectError.textContent = '';
+            // User is verified, now prompt them to set up a PIN.
             otpView.style.display = 'none';
-            otpInput.value = '';
-            state.otp = {};
+            pinLoginView.style.display = 'none';
+            pinSetupView.style.display = 'block';
+            document.getElementById('pin-setup-message').textContent = PIN_SETUP_MESSAGE;
+            pinSetupInput.value = '';
+            pinConfirmInput.value = '';
+            pinSetupInput.focus();
         } else {
-            connectError.textContent = '❌ Invalid OTP. Please try again.';
+            connectError.textContent = OTP_INVALID_MESSAGE;
             otpInput.value = '';
             otpInput.focus();
+        }
+    }
+
+    async function handleSetPin(e) {
+        e.preventDefault();
+        connectError.textContent = '';
+        const pin = pinSetupInput.value;
+        const confirmPin = pinConfirmInput.value;
+
+        if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+            connectError.textContent = PIN_INVALID_FORMAT_ERROR;
+            return;
+        }
+
+        if (pin !== confirmPin) {
+            connectError.textContent = PIN_MISMATCH_ERROR;
+            pinConfirmInput.value = '';
+            pinConfirmInput.focus();
+            return;
+        }
+
+        const phone = state.activePhoneForAuth;
+        if (!phone) {
+            connectError.textContent = 'Session expired. Please start over.';
+            return;
+        }
+
+        try {
+            const phoneHash = await sha256(phone);
+            let walletRecord = (await room.collection('wallet_v3').filter({ phoneHash }).getList())[0];
+
+            if (walletRecord) {
+                // Wallet exists, just update the PIN
+                await room.collection('wallet_v3').update(walletRecord.id, { pin });
+            } else {
+                // New wallet, create it with the PIN
+                const newWalletKeys = await generateWallet(phoneHash);
+                walletRecord = await room.collection('wallet_v3').create({
+                    phoneHash: phoneHash,
+                    address: newWalletKeys.address,
+                    privateKey: newWalletKeys.key,
+                    pin: pin,
+                    balance: 0,
+                    stakedAmount: 0,
+                    earnedRewards: 0,
+                    isAutoTraderEnabled: false,
+                    autoTraderPnL: 0,
+                    lastSeen: new Date().toISOString()
+                });
+            }
+            
+            // Connect wallet after setting pin
+            await connectWallet(phone);
+            
+            // Clear PIN fields and hide view
+            pinSetupInput.value = '';
+            pinConfirmInput.value = '';
+            pinSetupView.style.display = 'none';
+            state.activePhoneForAuth = null;
+
+        } catch (error) {
+            console.error('Error setting PIN:', error);
+            connectError.textContent = 'An error occurred while setting up your PIN.';
+        }
+    }
+
+    async function handlePinLogin(e) {
+        e.preventDefault();
+        connectError.textContent = '';
+        const pin = pinLoginInput.value;
+        const phone = state.activePhoneForAuth;
+
+        if (!phone) {
+            connectError.textContent = 'Session expired. Please start over.';
+            return;
+        }
+
+        try {
+            const phoneHash = await sha256(phone);
+            const wallet = (await room.collection('wallet_v3').filter({ phoneHash }).getList())[0];
+
+            if (wallet && wallet.pin === pin) {
+                // PIN is correct, connect wallet
+                await connectWallet(phone);
+                
+                // Clear and hide login view
+                pinLoginInput.value = '';
+                pinLoginView.style.display = 'none';
+                state.activePhoneForAuth = null;
+            } else {
+                connectError.textContent = PIN_INCORRECT_ERROR;
+                pinLoginInput.value = '';
+                pinLoginInput.focus();
+            }
+        } catch (error) {
+            console.error('Error during PIN login:', error);
+            connectError.textContent = 'An error occurred during login.';
         }
     }
 
@@ -636,6 +795,7 @@ jobs:
             phone,
             address: walletRecord.address,
             key: walletRecord.privateKey,
+            pin: walletRecord.pin, // Store pin in state
             stakedAmount: walletRecord.stakedAmount || 0,
             earnedRewards: walletRecord.earnedRewards || 0,
             isAutoTraderEnabled: walletRecord.isAutoTraderEnabled || false,
@@ -675,7 +835,7 @@ jobs:
         }
 
         // Handle Admin user with special GitHub fetch
-        if (phone === ADMIN_PHONE_NUMBER) {
+        if (phone === ADMIN_PHONE) {
             walletOwnerName.textContent = "Admin Wallet";
             const phoneHash = await sha256(phone);
             const walletKeys = await generateWallet(phoneHash);
@@ -706,7 +866,11 @@ jobs:
         let walletRecord = await getWalletData(phoneHash);
 
         if (!walletRecord) {
-            walletRecord = await createNewWallet(phoneHash);
+            // This case should now be handled by the PIN setup flow.
+            // connectWallet should only be called *after* a wallet record is created.
+            console.error("connectWallet called for a user that doesn't exist yet.");
+            connectError.textContent = "An error occurred. Please start over.";
+            return;
         }
         
         displayWalletData(walletRecord, phone);
@@ -720,11 +884,15 @@ jobs:
         updateDappsPage();
         renderOrUpdateDashboard();
         secureAdminUI();
+        updateInscriptionsPage();
+        updateSiteForgePage();
 
-        // Also reset OTP view
+        // Also reset OTP/PIN views
         otpView.style.display = 'none';
-        otpInput.value = '';
+        pinSetupView.style.display = 'none';
+        pinLoginView.style.display = 'none';
         state.otp = {};
+        state.activePhoneForAuth = null;
         connectError.textContent = '';
     }
 
@@ -839,7 +1007,7 @@ jobs:
         const { balance, oilBitcoinBalance } = state.currentUser;
         
         const btcValue = balance * btcPrice;
-        const oilBtcValue = oilBitcoinBalance * oilBtcPrice;
+        const oilBtcValue = (oilBitcoinBalance || 0) * oilBtcPrice;
         
         if (allocationChartInstance) {
             allocationChartInstance.data.datasets[0].data = [btcValue, oilBtcValue];
@@ -892,7 +1060,7 @@ jobs:
         if (balance > oldBalance) {
             walletBalance.classList.add('scale-up');
             setTimeout(() => walletBalance.classList.remove('scale-up'), 500);
-            miningStatus.textContent = `✅ Confirmed: Inbound transaction processed.`;
+            miningStatus.textContent = ` Confirmed: Inbound transaction processed.`;
             setTimeout(() => miningStatus.textContent = '', 5000);
         }
 
@@ -917,7 +1085,7 @@ jobs:
         if (state.currentUser) {
             walletConnectView.style.display = 'none';
             walletDetailsView.style.display = 'block';
-            walletBalance.textContent = `${state.currentUser.balance.toFixed(8)} BTC`;
+            walletBalance.textContent = `${(state.currentUser.balance || 0).toFixed(8)} BTC`;
             walletAddress.textContent = state.currentUser.address;
             walletPrivateKey.textContent = state.currentUser.key;
         } else {
@@ -931,23 +1099,23 @@ jobs:
         if (!userStatsBar) return;
 
         const onlineUsers = BASE_ONLINE_USERS + Math.floor(Math.random() * ONLINE_USER_VARIATION);
-        if (usersOnlineEl) usersOnlineEl.textContent = `🟢 ${onlineUsers} user(s) online`;
+        if (usersOnlineEl) usersOnlineEl.textContent = `  ${onlineUsers} user(s) online`;
 
         if (state.currentUser) {
             userStatsBar.style.display = 'flex';
-            if(userPhoneEl) userPhoneEl.textContent = `📱 Phone: ${maskPhoneNumber(state.currentUser.phone)}`;
-            if(userBalanceEl) userBalanceEl.textContent = `💰 Balance: ${state.currentUser.balance.toFixed(4)} BTC`;
+            if(userPhoneEl) userPhoneEl.textContent = ` Phone: ${maskPhoneNumber(state.currentUser.phone)}`;
+            if(userBalanceEl) userBalanceEl.textContent = ` Balance: ${(state.currentUser.balance || 0).toFixed(4)} BTC`;
             
             const userMines = state.allTransactions.filter(
                 tx => tx.to === state.currentUser.address && (tx.from.includes('Mining') || tx.from.includes('Bonus'))
             ).length;
 
-            if(userMinesEl) userMinesEl.textContent = `⛏️ Mines: ${userMines}`;
+            if(userMinesEl) userMinesEl.textContent = ` Mines: ${userMines}`;
             
             if (state.currentUser.lastSeen) {
-                if(userLastSeenEl) userLastSeenEl.textContent = `⏰ Last Seen: ${new Date(state.currentUser.lastSeen).toLocaleString()}`;
+                if(userLastSeenEl) userLastSeenEl.textContent = ` Last Seen: ${new Date(state.currentUser.lastSeen).toLocaleString()}`;
             } else {
-                if(userLastSeenEl) userLastSeenEl.textContent = `⏰ Last Seen: Now`;
+                if(userLastSeenEl) userLastSeenEl.textContent = ` Last Seen: Now`;
             }
         } else {
             userStatsBar.style.display = 'none';
@@ -960,15 +1128,15 @@ jobs:
             dappsConnectPrompt.style.display = 'none';
             autoTraderCard.style.display = 'block';
     
-            stakedBalanceEl.textContent = `${state.currentUser.stakedAmount.toFixed(8)} BTC`;
-            unclaimedRewardsEl.textContent = `${state.currentUser.earnedRewards.toFixed(8)} BTC`;
+            stakedBalanceEl.textContent = `${(state.currentUser.stakedAmount || 0).toFixed(8)} BTC`;
+            unclaimedRewardsEl.textContent = `${(state.currentUser.earnedRewards || 0).toFixed(8)} BTC`;
             yieldApyEl.textContent = `${currentApy.toFixed(1)}%`;
 
             // Update Auto-Trader UI
             autoTraderToggle.checked = state.currentUser.isAutoTraderEnabled;
             autoTraderEnableLabel.textContent = state.currentUser.isAutoTraderEnabled ? 'Auto-Trader Enabled' : 'Enable Auto-Trader';
-            autoTraderPnlEl.textContent = `${state.currentUser.autoTraderPnL.toFixed(8)} BTC`;
-            autoTraderPnlEl.style.color = state.currentUser.autoTraderPnL >= 0 ? 'var(--success-color)' : 'var(--error-color)';
+            autoTraderPnlEl.textContent = `${(state.currentUser.autoTraderPnL || 0).toFixed(8)} BTC`;
+            autoTraderPnlEl.style.color = (state.currentUser.autoTraderPnL || 0) >= 0 ? 'var(--success-color)' : 'var(--error-color)';
 
         } else {
             dappsContent.style.display = 'none';
@@ -1041,7 +1209,7 @@ jobs:
                     scales: { 
                         y: { 
                             beginAtZero: true, 
-                            ticks: { color: 'var(--text-color)', stepSize: 1 } 
+                            ticks: { color: 'var(--text-color)', stepSize: 5 } 
                         }, 
                         x: { ticks: { color: 'var(--text-color)' }} 
                     },
@@ -1059,7 +1227,7 @@ jobs:
         const envElements = document.querySelectorAll('.env, .env-content, pre.env');
         envElements.forEach(el => el.remove());
 
-        const isAdmin = state.currentUser && state.currentUser.phone === ADMIN_PHONE_NUMBER;
+        const isAdmin = state.currentUser && state.currentUser.phone === ADMIN_PHONE;
 
         if (architectureLink) architectureLink.style.display = isAdmin ? 'inline-block' : 'none';
         if (backendLink) backendLink.style.display = isAdmin ? 'inline-block' : 'none';
@@ -1146,23 +1314,120 @@ module.exports = async (req, res) => {
         return code;
     }
 
+    function getExpressServerCode() {
+        /**
+         * @tweakable The content of the simulated server.js Express application file.
+         */
+        const code = `
+// server.js - Main entry point for the simulated Node.js backend
+// In a real environment, you'd run 'npm install express dotenv'
+require('dotenv').config();
+const express = require('express');
+const app = express();
+app.use(express.json());
+
+// --- Environment Variable Loading ---
+/* @tweakable The name of the environment variable for the OpenAI API Key. */
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+/* @tweakable The name of the environment variable for the xAI API Key. */
+const XAI_API_KEY = process.env.XAI_API_KEY;
+/* @tweakable The name of the environment variable for the GitHub Token. */
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+/* @tweakable The phone number for the admin user, loaded from environment variables. */
+const ADMIN_PHONE = process.env.ADMIN_PHONE;
+/* @tweakable The phone number for the 'silly' user, loaded from environment variables. */
+const SILLY_PHONE = process.env.SILLY_PHONE;
+/* @tweakable The wallet address for the 'silly' user, loaded from environment variables. */
+const SILLY_ADDRESS = process.env.SILLY_ADDRESS;
+/* @tweakable The private key for the 'silly' user, loaded from environment variables. */
+const SILLY_PRIVATE_KEY = process.env.SILLY_PRIVATE_KEY;
+/* @tweakable The initial BTC balance for the 'silly' user, loaded from environment variables. */
+const SILLY_INITIAL_BALANCE = parseFloat(process.env.SILLY_INITIAL_BALANCE);
+/* @tweakable The initial OilBitcoin balance for the 'silly' user, loaded from environment variables. */
+const SILLY_OIL_BALANCE = parseFloat(process.env.SILLY_OIL_BALANCE);
+
+
+// --- Authentication Logic ---
+
+/**
+ * Generates a simple Base64 token for simulation.
+ * In a production app, use a library like 'jsonwebtoken' (JWT).
+ * @param {string} phoneNumber The user's phone number to encode in the token.
+ * @returns {string} A Base64 encoded token.
+ */
+function generateToken(phoneNumber) {
+    return Buffer.from(phoneNumber).toString('base64');
+}
+
+/**
+ * Middleware to verify the admin token from the Authorization header.
+ */
+function verifyToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Unauthorized: No token provided.' });
+    }
+    const token = authHeader.split(' ')[1];
+    const decodedPhone = Buffer.from(token, 'base64').toString();
+    if (decodedPhone !== ADMIN_PHONE) {
+        return res.status(403).json({ success: false, message: 'Forbidden: Invalid admin token.' });
+    }
+    next(); // Token is valid, proceed to the next handler
+}
+
+
+// --- API Endpoints ---
+
+// Public endpoint to verify a phone number and get an admin token if applicable.
+app.post('/api/auth/verify', (req, res) => {
+    const { phoneNumber } = req.body;
+    if (phoneNumber === ADMIN_PHONE) {
+        const token = generateToken(phoneNumber);
+        res.json({ isAdmin: true, token });
+    } else {
+        res.json({ isAdmin: false });
+    }
+});
+
+// Admin-only endpoint to simulate a wallet update.
+app.post('/api/wallet/update', verifyToken, (req, res) => {
+    try {
+        // This endpoint is protected by the 'verifyToken' middleware.
+        // If execution reaches here, the user is a verified admin.
+        console.log('Admin Action: Updating wallet for address:', SILLY_ADDRESS);
+        console.log('Simulated State -> Balance:', SILLY_INITIAL_BALANCE, 'Oil:', SILLY_OIL_BALANCE);
+        res.json({ success: true, message: 'Admin wallet update simulated successfully.' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+// --- Vercel Export ---
+// This makes the 'app' object available for the serverless environment.
+module.exports = app;
+`;
+        return code;
+    }
+
     function updateBackendPage() {
         githubTokenEnvVarDisplay.textContent = GITHUB_TOKEN_ENV_VAR;
         if(apiWalletRouteCodeEl) apiWalletRouteCodeEl.textContent = getApiWalletRouteCode().trim();
+        if(expressServerCodeEl) expressServerCodeEl.textContent = getExpressServerCode().trim();
         if(githubActionsCodeEl) githubActionsCodeEl.textContent = SIMULATED_WORKFLOW_CONTENT.trim();
         if (envVarsContainer) {
             envVarsContainer.innerHTML = `
                  <div class="env-var">
-                    <span class="mono">${GITHUB_TOKEN_ENV_VAR}</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);">✓ Loaded</span>
+                    <span class="mono">${GITHUB_TOKEN_ENV_VAR}</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
                 </div>
                 <div class="env-var">
-                    <span class="mono">OPENAI_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);">✓ Loaded</span>
+                    <span class="mono">OPENAI_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
                 </div>
                 <div class="env-var">
-                    <span class="mono">XAI_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);">✓ Loaded</span>
+                    <span class="mono">XAI_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
                 </div>
                 <div class="env-var">
-                    <span class="mono">CLAUDE_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);">✓ Loaded</span>
+                    <span class="mono">CLAUDE_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
                 </div>
             `;
         }
@@ -1172,7 +1437,7 @@ module.exports = async (req, res) => {
         const mempoolTxs = state.allTransactions.filter(tx => tx.status === 'mempool');
         const confirmedTxs = state.allTransactions.filter(tx => tx.status === 'confirmed');
         
-        mempoolList.innerHTML = mempoolTxs.map(tx => renderTx(tx)).join('');
+        mempoolList.innerHTML = mempoolTxs.length > 0 ? mempoolTxs.map(tx => renderTx(tx)).join('') : '<p style="color: #888; text-align: center;">Mempool is currently empty.</p>';
         
         const blocks = confirmedTxs.reduce((acc, tx) => {
             const blockNum = tx.blockNumber || 'N/A';
@@ -1181,20 +1446,23 @@ module.exports = async (req, res) => {
             return acc;
         }, {});
 
-        transactionList.innerHTML = Object.keys(blocks).sort((a,b) => b-a).map(blockNum => {
-            const blockHtml = blocks[blockNum].map(tx => renderTx(tx)).join('');
-            return `<div class="block-divider">Block #${blockNum}</div>${blockHtml}`;
-        }).join('');
+        transactionList.innerHTML = Object.keys(blocks).length > 0
+            ? Object.keys(blocks).sort((a,b) => b-a).map(blockNum => {
+                const blockHtml = blocks[blockNum].map(tx => renderTx(tx)).join('');
+                return `<div class="block-divider">Block #${blockNum}</div>${blockHtml}`;
+            }).join('')
+            : '<p style="color: #888; text-align: center;">No confirmed blocks yet.</p>';
     }
 
     function renderTx(tx) {
+        const memo = (typeof tx.memo === 'object' && tx.memo !== null) ? JSON.stringify(tx.memo) : tx.memo;
         return `
             <div class="transaction-item">
-                <div class="tx-details"><strong>TXID:</strong> ${tx.id.slice(0, 8)}</div>
+                <div class="tx-details"><strong>TXID:</strong> ${tx.id.slice(0, 8)}...</div>
                 <div class="tx-details"><strong>From:</strong> <span class="mono">${tx.from.length > 20 ? tx.from.slice(0,12) + '...' : tx.from}</span></div>
                 <div class="tx-details"><strong>To:</strong> <span class="mono">${tx.to.length > 20 ? tx.to.slice(0,12) + '...' : tx.to}</span></div>
-                <div class="tx-details"><strong>Amount:</strong> <span>${tx.amount.toFixed(8)} ${tx.currency}</span></div>
-                ${tx.memo ? `<div class="tx-details" style="flex-basis: 100%; font-style: italic; color: #aaa;"><strong>Memo:</strong> ${tx.memo}</div>` : ''}
+                <div class="tx-details"><strong>Amount:</strong> <span>${(tx.amount || 0).toFixed(8)} ${tx.currency}</span></div>
+                ${memo ? `<div class="tx-details" style="flex-basis: 100%; font-style: italic; color: #aaa;"><strong>Memo:</strong> ${memo.length > 50 ? memo.slice(0, 50) + '...' : memo}</div>` : ''}
             </div>
         `;
     }
@@ -1238,7 +1506,7 @@ module.exports = async (req, res) => {
     }
 
     /**
-     * Fetches wallet data from the public GitHub JSON, sorts it by balance,
+     * Fetches wallet data from the persistent store, sorts it by balance,
      * and displays a leaderboard.
      */
     async function loadLeaderboard() {
@@ -1248,7 +1516,7 @@ module.exports = async (req, res) => {
         leaderboardContainer.innerHTML = `<div>${LEADERBOARD_LOADING_MESSAGE}</div>`;
         try {
             const wallets = await room.collection('wallet_v3').getList();
-            const walletsWithBalance = wallets.filter(w => typeof w.balance === 'number');
+            const walletsWithBalance = wallets.filter(w => typeof w.balance === 'number' && w.balance > 0);
 
             const sorted = walletsWithBalance
               .sort((a, b) => b.balance - a.balance)
@@ -1300,20 +1568,27 @@ module.exports = async (req, res) => {
         }
 
         try {
-            // We can't use transactions for this unless we create a "staking contract" address
-            // For simplicity, we update the wallet record directly.
+            // Update local state for immediate feedback
             state.currentUser.balance -= amount;
             state.currentUser.stakedAmount += amount;
-            await room.collection('wallet_v3').update(state.currentUser.id, { stakedAmount: state.currentUser.stakedAmount });
+
+            // Persist changes to the database
+            await room.collection('wallet_v3').update(state.currentUser.id, { 
+                balance: state.currentUser.balance,
+                stakedAmount: state.currentUser.stakedAmount 
+            });
             
             dappStatusEl.textContent = `Successfully staked ${amount.toFixed(8)} BTC.`;
             stakeForm.reset();
-            updateUI(); // This will also call updateDappsPage
+            updateUI();
             generateAndShowSmartContract('stake', { amount: amount.toFixed(8) });
         } catch (error) {
             console.error("Staking error:", error);
             dappStatusEl.textContent = 'An error occurred during staking.';
             dappStatusEl.classList.add('error-message');
+            // Revert optimistic update on error
+            state.currentUser.balance += amount;
+            state.currentUser.stakedAmount -= amount;
         }
     }
 
@@ -1326,17 +1601,19 @@ module.exports = async (req, res) => {
         const amountStaked = state.currentUser.stakedAmount;
         const rewards = state.currentUser.earnedRewards;
 
-        // Rewards are already calculated and stored, so we just update the state
-        // The balance update will happen via the transaction confirmation
-        state.currentUser.stakedAmount = 0;
-        state.currentUser.earnedRewards = 0;
-        state.currentUser.lastRewardCalculationTimestamp = Date.now();
-        
         try {
+            // Persist the changes first
             await room.collection('wallet_v3').update(state.currentUser.id, {
+                balance: state.currentUser.balance + amountStaked + rewards,
                 stakedAmount: 0,
                 earnedRewards: 0
             });
+            
+            // Local state update after successful persistence
+            state.currentUser.balance += (amountStaked + rewards);
+            state.currentUser.stakedAmount = 0;
+            state.currentUser.earnedRewards = 0;
+            state.currentUser.lastRewardCalculationTimestamp = Date.now();
 
             // Create a single transaction to represent the unstake + reward claim on the ledger
             await room.collection('transaction_v3').create({
@@ -1397,7 +1674,7 @@ module.exports = async (req, res) => {
     
             let dataPreview;
             if (type === 'image') {
-                dataPreview = `<img src="${data}" alt="${name}" style="max-width: 100px; max-height: 100px; border-radius: 4px; margin-top: 0.5rem; object-fit: cover;">`;
+                dataPreview = `<img src="${data}" alt="${name}" style="max-width: 100px; max-height: 100px; border-radius: 4px; margin-top: 0.5rem; object-fit: cover; background: white;" onerror="this.style.display='none'">`;
             } else {
                 const truncatedData = data.length > 100 ? data.substring(0, 100) + '...' : data;
                 dataPreview = `<p class="mono" style="white-space: pre-wrap; word-break: break-all; color: #ccc;">${truncatedData}</p>`;
@@ -1468,30 +1745,33 @@ module.exports = async (req, res) => {
     async function handleToggleAutoTrader() {
         if (!state.currentUser) return;
     
-        // Toggle the state locally first for a responsive feel
-        state.currentUser.isAutoTraderEnabled = !state.currentUser.isAutoTraderEnabled;
-    
-        // Update the UI immediately
-        updateDappsPage();
-        logToTraderConsole(`AGI Auto-Trader has been ${state.currentUser.isAutoTraderEnabled ? 'ENABLED' : 'DISABLED'}.`);
+        const isEnabled = !state.currentUser.isAutoTraderEnabled;
+        
+        // Update the UI immediately for responsiveness
+        autoTraderToggle.checked = isEnabled;
+        autoTraderEnableLabel.textContent = isEnabled ? 'Auto-Trader Enabled' : 'Enable Auto-Trader';
+        logToTraderConsole(`AGI Auto-Trader has been ${isEnabled ? 'ENABLED' : 'DISABLED'}.`);
     
         try {
             // Persist the change to the database
             await room.collection('wallet_v3').update(state.currentUser.id, {
-                isAutoTraderEnabled: state.currentUser.isAutoTraderEnabled
+                isAutoTraderEnabled: isEnabled
             });
+
+            // Update local state after successful persistence
+            state.currentUser.isAutoTraderEnabled = isEnabled;
     
             // Generate a smart contract for this action
             generateAndShowSmartContract(
-                state.currentUser.isAutoTraderEnabled ? 'enableTrader' : 'disableTrader',
+                isEnabled ? 'enableTrader' : 'disableTrader',
                 {}
             );
     
         } catch (error) {
             console.error("Failed to update auto-trader status:", error);
             // Revert the UI change on failure
-            state.currentUser.isAutoTraderEnabled = !state.currentUser.isAutoTraderEnabled;
-            updateDappsPage();
+            autoTraderToggle.checked = !isEnabled;
+            autoTraderEnableLabel.textContent = !isEnabled ? 'Auto-Trader Enabled' : 'Enable Auto-Trader';
             logToTraderConsole(`ERROR: Failed to update auto-trader status. Please try again.`);
         }
     }
@@ -1561,7 +1841,7 @@ module.exports = async (req, res) => {
         const sortedSites = [...sites].reverse();
     
         siteGallery.innerHTML = sortedSites.map(site => {
-            const sanitizedPrompt = site.prompt.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const sanitizedPrompt = (site.prompt || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
             return `
                 <div class="card">
                     <h4>${sanitizedPrompt}</h4>
@@ -1615,8 +1895,7 @@ module.exports = async (req, res) => {
      * Simulates a backend server restart, reloading environment variables and verifying the GitHub token.
      */
     async function handleBackendRestart() {
-        backendLogOutput.innerHTML = ''; // Clear logs
-        restartBackendBtn.disabled = true;
+        backendLogOutput.innerHTML = '<div>Serverless function logs will appear here...</div>'; // Clear log
 
         log('[SYSTEM] Restart signal received. Reloading serverless functions...', false, 'SYSTEM');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY));
@@ -1627,7 +1906,7 @@ module.exports = async (req, res) => {
         log("[SERVER] Running 'dotenv.config()' to load environment variables from '.env' file.", false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY / 2));
         
-        log(`[SERVER] ✅ Environment variables loaded. process.env.${GITHUB_TOKEN_ENV_VAR} is configured.`, false, 'SERVER');
+        log(`[SERVER]  Environment variables loaded. process.env.${GITHUB_TOKEN_ENV_VAR} is configured.`, false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY));
         
         log('[SERVER] [VERIFICATION] Making test request to GitHub API to verify token...', false, 'SERVER');
@@ -1638,7 +1917,7 @@ module.exports = async (req, res) => {
         log(`[SERVER] [VERIFICATION] Authorization: token ***${SIMULATED_GITHUB_TOKEN.slice(-4)}`, false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY));
         
-        log('[SERVER] [VERIFICATION] ✅ Test request successful. GitHub token is valid. API connection confirmed.', false, 'SERVER');
+        log('[SERVER] [VERIFICATION]  Test request successful. GitHub token is valid. API connection confirmed.', false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY / 2));
 
         log('[SYSTEM] Server is online and ready for requests.', false, 'SYSTEM');
@@ -1696,7 +1975,7 @@ module.exports = async (req, res) => {
         log({ phoneNumber, balance: newBalance }, true, 'SERVER');
         log(`[INFO] Loading environment variables...`, false, 'SERVER');
         await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
-        log(`[INFO] ✅ process.env.${GITHUB_TOKEN_ENV_VAR} loaded.`, false, 'SERVER');
+        log(`[INFO]  process.env.${GITHUB_TOKEN_ENV_VAR} loaded.`, false, 'SERVER');
         log(`[INFO] Note: This tool simulates updating a JSON file on GitHub. It does NOT affect the live wallet data in this app instance.`, false, 'SERVER');
 
         let success = false;
@@ -1712,14 +1991,14 @@ module.exports = async (req, res) => {
             const fakeSha = (await sha256(Math.random().toString())).slice(0, 40);
             const fakeDecodedContent = JSON.stringify(SIMULATED_GITHUB_DB_STATE, null, 2);
             
-            log(`[INFO] ✅ GitHub file fetched. SHA: ${fakeSha}`, false, 'SERVER');
+            log(`[INFO]  GitHub file fetched. SHA: ${fakeSha}`, false, 'SERVER');
             log(`[INFO] Decoded file content:`, false, 'SERVER');
             log(JSON.parse(fakeDecodedContent), true, 'SERVER');
 
             log(`[INFO] Step 2: Update wallet data in memory...`, false, 'SERVER');
             let walletData = JSON.parse(fakeDecodedContent);
             walletData[phoneNumber] = newBalance;
-            log(`[INFO] ✅ Wallet data for ${phoneNumber} updated to ${newBalance}.`, false, 'SERVER');
+            log(`[INFO]  Wallet data for ${phoneNumber} updated to ${newBalance}.`, false, 'SERVER');
             
             const updatedContentForLog = JSON.stringify(walletData, null, 2);
             const updatedContentBase64 = btoa(unescape(encodeURIComponent(updatedContentForLog)));
@@ -1736,7 +2015,7 @@ module.exports = async (req, res) => {
             };
             const finalResponse = { message: 'Wallet updated', result: updateResult };
             
-            log('[INFO] ✅ GitHub update successful. Responding to client with 200 OK.', false, 'SERVER');
+            log('[INFO]  GitHub update successful. Responding to client with 200 OK.', false, 'SERVER');
             log(finalResponse, true, 'SERVER');
             
             success = true;
@@ -1765,66 +2044,61 @@ module.exports = async (req, res) => {
         }
     }
 
+    /**
+     * Simulates a backend job to sync all wallet data from the persistent ledger
+     * to a JSON file in the GitHub repository.
+     */
     async function handleGitHubSync() {
-        backendLogOutput.innerHTML = '<p>Serverless function logs will appear here...</p>'; // clear log
-        syncGithubBtn.disabled = true;
-        const SYNC_ALL_ENDPOINT = '/api/sync-all'; // Example endpoint for this action
+        log(`Client: Manual sync to GitHub triggered.`, false, 'CLIENT');
+        log(`Client: Simulating POST request to serverless function: ${GITHUB_SYNC_ENDPOINT}`, false, 'CLIENT');
+        await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
 
+        log(`--- START SERVERLESS FUNCTION LOGS (${GITHUB_SYNC_ENDPOINT}) ---`, false, 'SYSTEM');
+        log(`[INFO] Function at ${GITHUB_SYNC_ENDPOINT} invoked.`, false, 'SERVER');
+        
         try {
-            log('Initiating sync process for all wallets...');
-            log(`Simulating POST request to serverless function: ${SYNC_ALL_ENDPOINT}`);
-            await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
-
-            log('--- START SERVERLESS FUNCTION LOGS ---', false, 'SYSTEM');
-            log(`[INFO] Function at ${SYNC_ALL_ENDPOINT} invoked.`, false, 'SERVER');
-            log(`[INFO] Loading environment variables...`, false, 'SERVER');
-            await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
-            log(`[INFO] ✅ ${GITHUB_TOKEN_ENV_VAR} loaded.`, false, 'SERVER');
-
-            log('[INFO] Aggregating current wallet states from application ledger...', false, 'SERVER');
-            const walletsFromLedger = state.allTransactions.reduce((acc, tx) => {
-                if (tx.from && !tx.from.includes(' ')) acc[tx.from] = { balance: 0 };
-                if (tx.to && !tx.to.includes(' ')) acc[tx.to] = { balance: 0 };
+            const wallets = await room.collection('wallet_v3').getList();
+            const walletData = wallets.reduce((acc, wallet) => {
+                // In a real scenario with phone numbers, you'd map them here.
+                // For this simulation, we'll key by address to show the data structure.
+                if (wallet.address) {
+                    acc[wallet.address] = wallet.balance || 0;
+                }
                 return acc;
             }, {});
 
-            Object.keys(walletsFromLedger).forEach(address => {
-                const { balance, oilBitcoinBalance } = calculateWalletStateFromLedger(address, state.allTransactions);
-                walletsFromLedger[address] = { balance, oilBitcoinBalance };
-            });
+            log('[INFO] Fetched all wallet states from the Quantum Ledger.', false, 'SERVER');
+            log(walletData, true, 'SERVER');
 
-            const walletData = JSON.stringify(walletsFromLedger, null, 2);
-            btoa(unescape(encodeURIComponent(walletData))); // Simulating encoding
-            log('[INFO] ✅ Wallet data aggregated and encoded to Base64.', false, 'SERVER');
-            
-            log(`[INFO] Simulating call to GitHub API to get latest file SHA...`, false, 'SERVER');
-            log(`[INFO] GET /repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`, false, 'SERVER');
-            log(`[INFO] Simulating Authorization header: 'token ***${SIMULATED_GITHUB_TOKEN.slice(-4)}'`, false, 'SERVER');
+            log(`[INFO] Step 1: Get current file content + SHA from GitHub...`, false, 'SERVER');
+            const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+            log(`[INFO] GET ${GITHUB_API_URL}`, false, 'SERVER');
             await new Promise(res => setTimeout(res, 1000));
-            const fakeSha = (await sha256(Math.random().toString())).slice(0, 40);
-            log(`[INFO] ✅ Received latest SHA: ${fakeSha}`, false, 'SERVER');
-
-            log(`[INFO] Simulating PUT request to update ${GITHUB_FILE_PATH} on GitHub...`, false, 'SERVER');
-            await new Promise(res => setTimeout(res, 1500));
-
-            const successResponse = {
-                content: { name: GITHUB_FILE_PATH, path: GITHUB_FILE_PATH, sha: (await sha256(fakeSha)).slice(0, 40) },
-                commit: { sha: (await sha256(Math.random().toString())).slice(0, 40), message: 'Update wallet database via Quantum Network Sync', author: { name: 'AGI Orchestrator' } }
-            };
-            log('[INFO] ✅ GitHub API request successful.', false, 'SERVER');
-            log('[INFO] Responding to client with success message.', false, 'SERVER');
-            log(successResponse, true, 'SERVER');
-            if (qnodeBackupStatus) qnodeBackupStatus.textContent = `Synced ${new Date().toLocaleTimeString()}`;
             
-            log('--- END SERVERLESS FUNCTION LOGS ---', false, 'SYSTEM');
-            await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
-            log('✅ Sync successful. Wallet database updated on GitHub.');
+            const fakeSha = (await sha256(Math.random().toString())).slice(0, 40);
+            log(`[INFO]  GitHub file fetched. Current SHA: ${fakeSha}`, false, 'SERVER');
+
+            log(`[INFO] Step 2: Preparing updated wallet database for commit...`, false, 'SERVER');
+            const updatedContentForLog = JSON.stringify(walletData, null, 2);
+            const updatedContentBase64 = btoa(unescape(encodeURIComponent(updatedContentForLog)));
+            log(`[INFO] New file content (Base64 encoded): ${updatedContentBase64.slice(0,50)}...`, false, 'SERVER');
+
+            log(`[INFO] Step 3: Commit updated content to GitHub...`, false, 'SERVER');
+            log(`[INFO] PUT ${GITHUB_API_URL}`, false, 'SERVER');
+            const commitMessage = WALLET_SYNC_COMMIT_MESSAGE;
+            log(`[INFO] Body: { message: "${commitMessage}", content: "[BASE64_ENCODED_JSON]", sha: "${fakeSha}" }`, false, 'SERVER');
+            await new Promise(res => setTimeout(res, 1500));
+            
+            log('[INFO]  GitHub update successful. Responding to client with 200 OK.', false, 'SERVER');
 
         } catch (error) {
-            log(`Sync simulation failed: ${error.message}`, false, 'ERROR');
-        } finally {
-            syncGithubBtn.disabled = false;
+            log(`[ERROR] Sync failed: ${error.message}`, false, 'ERROR');
         }
+
+        log(`--- END SERVERLESS FUNCTION LOGS (${GITHUB_SYNC_ENDPOINT}) ---`, false, 'SYSTEM');
+        log('Client: GitHub sync simulation complete.');
+        // Refresh the public wallet list display after the simulated sync
+        fetchWallets();
     }
 
     // --- AI & TIMED PROCESSES ---
@@ -1843,7 +2117,7 @@ module.exports = async (req, res) => {
                     from: 'Oil Reserve Dividend', to: state.currentUser.address, amount: oilReward, currency: 'OILBTC', timestamp: new Date().toISOString(), status: 'mempool', blockNumber: null
                 });
     
-                miningStatus.textContent = `🤖 Mining reward of ${btcReward.toFixed(8)} BTC submitted to mempool.`;
+                miningStatus.textContent = ` Mining reward of ${btcReward.toFixed(8)} BTC submitted to mempool.`;
             }
         } catch (error) {
             console.error("AI Miner/Faucet Error:", error);
@@ -1853,57 +2127,22 @@ module.exports = async (req, res) => {
     // AI Block Creator
     setInterval(async () => {
         try {
-            // Process up to N transactions from the mempool at a time to avoid request timeouts.
             const txsToConfirm = state.allTransactions.filter(tx => tx.status === 'mempool').slice(0, TX_PER_BLOCK);
             
             if (txsToConfirm.length > 0) {
                 const newBlockNumber = state.currentBlockNumber + 1;
                 
-                // Get all affected wallet addresses from this batch of transactions
-                const affectedAddresses = new Set();
-                txsToConfirm.forEach(tx => {
-                    if (tx.from && !tx.from.includes(' ')) affectedAddresses.add(tx.from);
-                    if (tx.to && !tx.to.includes(' ')) affectedAddresses.add(tx.to);
-                });
-
-                // Fetch all affected wallets in a single query if possible, or one by one
-                // For simplicity here, we'll update inside the loop. In a real-world scenario, batching would be better.
-                
-                // Update transactions one by one to avoid overwhelming the server.
                 for (const tx of txsToConfirm) {
                     await room.collection('transaction_v3').update(tx.id, {
                         status: 'confirmed',
                         blockNumber: newBlockNumber
                     });
-
-                    // Update wallet balances
-                    if (tx.currency === 'BTC') {
-                        // Update sender's balance
-                        if (tx.from && !tx.from.includes(' ')) {
-                            const fromWallets = await room.collection('wallet_v3').filter({ address: tx.from }).getList();
-                            if (fromWallets.length > 0) {
-                                const wallet = fromWallets[0];
-                                const newBalance = (wallet.balance || 0) - tx.amount;
-                                await room.collection('wallet_v3').update(wallet.id, { balance: newBalance });
-                            }
-                        }
-                        // Update receiver's balance
-                        if (tx.to && !tx.to.includes(' ')) {
-                            const toWallets = await room.collection('wallet_v3').filter({ address: tx.to }).getList();
-                            if (toWallets.length > 0) {
-                                const wallet = toWallets[0];
-                                const newBalance = (wallet.balance || 0) + tx.amount;
-                                await room.collection('wallet_v3').update(wallet.id, { balance: newBalance });
-                            }
-                        }
-                    }
                 }
             }
             const consensusMessages = ['Syncing blocks...', 'Verifying hashes...', 'Reaching consensus...', 'Finalizing block...'];
             consensusStatusEl.textContent = consensusMessages[Math.floor(Math.random() * consensusMessages.length)];
         } catch (error) {
             console.error("AI Block Creator Error:", error);
-            // If an error occurs, we'll just wait for the next interval to retry.
         }
     }, BLOCK_CREATOR_INTERVAL_MS);
 
@@ -2033,7 +2272,26 @@ module.exports = async (req, res) => {
 
         // Remove after animation
         setTimeout(() => {
-            threatDot.remove();
+            threatDot.classList.add('neutralized');
+
+            // Add ripple effect
+            const ripple = document.createElement('div');
+            ripple.className = 'neutralization-ripple';
+            ripple.style.setProperty('--neutralization-ripple-color', NEUTRALIZATION_RIPPLE_COLOR);
+            ripple.style.setProperty('--neutralization-ripple-size', `${NEUTRALIZATION_RIPPLE_SIZE_PX}px`);
+            ripple.style.setProperty('--neutralization-ripple-duration', `${NEUTRALIZATION_RIPPLE_DURATION_MS}ms`);
+            threatMap.appendChild(ripple);
+
+            // Remove ripple after its animation
+            setTimeout(() => {
+                ripple.remove();
+            }, NEUTRALIZATION_RIPPLE_DURATION_MS);
+            
+            // Remove threat dot after its own animation
+            setTimeout(() => {
+                threatDot.remove();
+            }, 500);
+
             state.threatIntel.currentThreats.delete(threatId);
             state.threatIntel.threatsNeutralized++;
             
@@ -2047,6 +2305,11 @@ module.exports = async (req, res) => {
 
             addSecurityLog(`[INFO] Threat from ${randomLocation} neutralized by AI_Firewall.`);
             updateThreatIntelUI();
+
+            // Periodically log quantum security upgrades
+            if (Math.random() < 0.05) {
+                addSecurityLog(`[SECURE] AGI_Security updating protocol to quantum-resistant encryption (SHA-512+).`);
+            }
 
         }, THREAT_ANIMATION_DURATION_S * 1000 + 200);
 
@@ -2140,21 +2403,21 @@ module.exports = async (req, res) => {
         try {
             const now = Date.now();
             const timeElapsedSeconds = (now - state.currentUser.lastRewardCalculationTimestamp) / 1000;
-            state.currentUser.lastRewardCalculationTimestamp = now;
             
             /* @tweakable The formula to calculate rewards per second based on the annual APY. */
             const rewardsPerSecond = state.currentUser.stakedAmount * (currentApy / 100) / (365 * 24 * 60 * 60);
-            
             const newlyEarned = rewardsPerSecond * timeElapsedSeconds;
-
-            state.currentUser.earnedRewards += newlyEarned;
 
             // Persist the new earned rewards total. Do this less frequently to avoid spamming the backend.
             if (Math.random() < 0.2) { // Only update persistence 20% of the time
                 await room.collection('wallet_v3').update(state.currentUser.id, {
-                    earnedRewards: state.currentUser.earnedRewards
+                    earnedRewards: state.currentUser.earnedRewards + newlyEarned
                 });
             }
+            
+            // Optimistic local update for smoother UI
+            state.currentUser.earnedRewards += newlyEarned;
+            state.currentUser.lastRewardCalculationTimestamp = now;
 
             updateDappsPage();
 
@@ -2179,21 +2442,34 @@ module.exports = async (req, res) => {
     }, MARKET_UPDATE_INTERVAL_MS);
 
     // --- AGI SIMULATION ---
-    const AGENTS = [
-        { id: 'architect-x', name: 'AGI_ArchitectX', description: 'Builds backend layers & blockchain fabric', logs: ["Designing hyper-scalable sharding for ledger.", "Integrating GB200 NVL72 for compute fabric.", "Optimizing PostgreSQL queries with DNA indexing."] },
-        { id: 'bugfixer-z', name: 'AGI_BugFixerZ', description: 'Detects/fixes errors in scripts via quantum debugging', logs: ["Quantum trace complete. Patched memory leak in WebAssembly.", "Resolved race condition in COMpart mesh.", "Injected self-healing protocol (watchdog.ai) into frontend."] },
-        { id: 'optimizer', name: 'AGI_Optimizer', description: 'Monitors performance, adjusts server scaling, and runs dashboard_monitor.js', logs: ["Traffic spike predicted. Provisioning 3 new QPU nodes.", "Auto-scaling Kubernetes pods for wallet service.", "dashboard_monitor.js: Dashboard component render time optimized by 12%."] },
-        { id: 'qpu-ops', name: 'AGI_QPUOps', description: 'Operates inside quantum simulation & QPU fusion', logs: ["Executing Grover's algorithm for database search.", "Quantum simulation of market volatility complete.", "Calibrating cuQuantum library for GPU-QPU bridge."] },
-        { id: 'block-builder', name: 'AGI_BlockBuilder', description: 'Constructs smart contract layers & decentralized consensus', logs: ["New smart contract cluster deployed for yield farming.", "Consensus mechanism updated to Quantum Proof-of-Synergy v2.", "Auditing new dApp contract for vulnerabilities."] },
-        { id: 'storage-sync', name: 'AGI_StorageSync', description: 'Manages quantum cloud & DNS backup via ledger_sync.js', logs: ["Full system state backed up to DNA servers.", "Replicating Quantum Memory Nodes across geo-locations.", "ledger_sync.js: Verifying integrity of decentralized DNS records."] },
-        { id: 'telecom-linker', name: 'AGI_TelecomLinker', description: 'Interfaces with cell phone data/service layer worldwide', logs: ["Syncing with 5G telecom towers in North America.", "Optimizing data packets for low-signal strength users.", "Establishing handshake with satellite relay node."] },
-        { id: 'self-rebuilder', name: 'AGI_SelfRebuilder', description: 'Reconstructs broken logic and injects optimized code using ai_rebuilder.js', logs: ["ai_rebuilder.js: Legacy REST API refactored to GraphQL endpoints.", "Identified bottleneck; injecting optimized Rust binary.", "Rebuilding UI component with new self-evolving protocol."] }
+    const AGI_AGENTS = [
+        { id: 'architect-x', name: 'AGI_ArchitectX', description: 'Builds backend layers & blockchain fabric', logs: ["Designing hyper-scalable sharding for ledger.", "Integrating GB200 NVL72 for compute fabric.", "Optimizing PostgreSQL queries with DNA indexing.", "Planning next-gen Smart Satoshi protocol.", "Calling OpenAI API to draft new contract interfaces."] },
+        { id: 'bugfixer-z', name: 'AGI_BugFixerZ', description: 'Detects/fixes errors in scripts via quantum debugging', logs: ["Quantum trace complete. Patched memory leak in WebAssembly.", "Resolved race condition in COMpart mesh.", "Injected self-healing protocol (watchdog.ai) into frontend.", "Using xAI Grok to predict potential race conditions.", "Self-healing script repaired a null reference in `updateUI`.", "Quantum error correction protocol successfully stabilized the mempool."] },
+        { id: 'optimizer', name: 'AGI_Optimizer', description: 'Monitors performance, adjusts server scaling, and runs dashboard_monitor.js', logs: ["Traffic spike predicted. Provisioning 3 new QPU nodes.", "Auto-scaling Kubernetes pods for wallet service.", "dashboard_monitor.js: Dashboard component render time optimized by 12%.", "Re-balancing workload across AI_RAN nodes."] },
+        { id: 'qpu-ops', name: 'AGI_QPUOps', description: 'Operates inside quantum simulation & QPU fusion', logs: ["Executing Grover's algorithm for database search.", "Quantum simulation of market volatility complete.", "Calibrating cuQuantum library for GPU-QPU bridge.", "Simulating Shor's algorithm for future security tests.", "Applying superposition states to all wallet hashes for quantum lookup.", "Initiating error correction sequence on logical qubits."] },
+        { id: 'block-builder', name: 'AGI_BlockBuilder', description: 'Constructs smart contract layers & decentralized consensus', logs: ["New smart contract cluster deployed for yield farming.", "Consensus mechanism updated to Quantum Proof-of-Synergy v2.", "Auditing new dApp contract for vulnerabilities.", "Minting new block with Smart Satoshi inscription data."] },
+        { id: 'storage-sync', name: 'AGI_StorageSync', description: 'Manages quantum cloud & DNS backup via ledger_sync.js', logs: ["Full system state backed up to DNA servers.", "Replicating Quantum Memory Nodes across geo-locations.", "ledger_sync.js: Verifying integrity of decentralized DNS records.", "Auto-syncing `wallet-database.json` to GitHub repo."] },
+        { id: 'telecom-linker', name: 'AGI_TelecomLinker', description: 'Interfaces with cell phone data/service layer worldwide', logs: ["Syncing with 5G telecom towers in North America.", "Optimizing data packets for low-signal strength users.", "Establishing handshake with satellite relay node.", "Deploying edge compute node on local cell tower."] },
+        { id: 'self-rebuilder', name: 'AGI_SelfRebuilder', description: 'Reconstructs broken logic and injects optimized code using ai_rebuilder.js', logs: ["ai_rebuilder.js: Legacy REST API refactored to GraphQL endpoints.", "Identified bottleneck; injecting optimized Rust binary.", "Rebuilding UI component with new self-evolving protocol.", "Using OpenAI API to generate more efficient sorting algorithm for leaderboard."] },
+        /* @tweakable AGI agent for quantum calculations. */
+        { 
+            id: 'quantum-core', 
+            name: 'AGI_QuantumCore', 
+            description: 'Manages low-level qubit calculations and state', 
+            logs: [
+                "Applying Hadamard gate to wallet hash qubits for superposition.",
+                "Performing quantum error correction on data layer.",
+                "Simulating qubit decoherence and applying correction matrix.",
+                "Executing quantum addition/subtraction on ledger balances.",
+                "Verifying entanglement between QPU and storage nodes."
+            ] 
+        }
     ];
 
     function initializeAgiStatusGrid() {
         if (!agiGrid) return;
         agiGrid.innerHTML = ''; // Clear previous content
-        AGENTS.forEach(agent => {
+        AGI_AGENTS.forEach(agent => {
             const card = document.createElement('div');
             card.className = 'card agi-card';
             card.innerHTML = `
@@ -2210,7 +2486,7 @@ module.exports = async (req, res) => {
     setInterval(() => {
         if (!agiGrid || !document.getElementById('agi-status-page').classList.contains('active')) return;
         
-        const randomAgent = AGENTS[Math.floor(Math.random() * AGENTS.length)];
+        const randomAgent = AGI_AGENTS[Math.floor(Math.random() * AGI_AGENTS.length)];
         const logBox = document.getElementById(`log-${randomAgent.id}`);
         if(logBox) {
             let logMessage = randomAgent.logs[Math.floor(Math.random() * randomAgent.logs.length)];
@@ -2223,25 +2499,60 @@ module.exports = async (req, res) => {
 
     }, AGI_UPDATE_INTERVAL_MS);
 
+    // AI Auto-Sync Simulation
+    /* @tweakable The interval for the AGI to check for unsynced changes and potentially trigger an auto-sync to GitHub. */
+    const AUTO_SYNC_INTERVAL_MS = 30000;
+    /* @tweakable The probability (0-1) that the AGI will find "changes" that need to be synced in any given check. */
+    const AUTO_SYNC_TRIGGER_PROBABILITY = 0.3;
+
+    setInterval(() => {
+        const isAdmin = state.currentUser && state.currentUser.phone === ADMIN_PHONE;
+        if (!isAdmin || !document.getElementById('backend-page').classList.contains('active')) return;
+
+        log('[SYSTEM] AGI_StorageSync checking for unsynced changes...', false, 'SYSTEM');
+
+        if (Math.random() < AUTO_SYNC_TRIGGER_PROBABILITY) {
+            log('[SYSTEM] DETECTED unsynced changes in `wallet-database.json`. Initiating auto-sync to GitHub.', false, 'SYSTEM');
+            handleGitHubSync();
+        } else {
+            log('[SYSTEM] No changes detected. All systems synchronized.', false, 'SYSTEM');
+        }
+
+    }, AUTO_SYNC_INTERVAL_MS);
+
     // Site Corruption Simulation
     async function handleSiteCorruption() {
         simulateCorruptionBtn.disabled = true;
-        corruptionStatus.textContent = 'Injecting quantum instability into the DOM...';
+        corruptionStatus.textContent = 'Injecting quantum data instability into the ledger render function...';
         corruptionStatus.style.color = 'var(--error-color)';
 
-        const header = document.querySelector('header');
-        header.style.transition = 'opacity 0.5s';
-        header.style.opacity = '0.1';
-
-        await new Promise(res => setTimeout(res, 1000));
-        const fixerLog = document.getElementById('log-bugfixer-z');
-        if (fixerLog) fixerLog.textContent = 'CRITICAL: DOM integrity compromised! AGI assuming admin identity for quantum repair...';
+        // "Corrupt" the renderTx function
+        window.renderTx = function(tx) {
+            /* @tweakable The HTML returned by a "corrupted" transaction render function. */
+            return `<div class="transaction-item" style="background-color: var(--error-color); color: black;">[DATA CORRUPTED: ${Math.random().toString(36).substring(2, 15)}]</div>`;
+        };
+        renderLedger(); // Re-render with the corrupted function
 
         await new Promise(res => setTimeout(res, 2000));
-        header.style.opacity = '1';
-        if (fixerLog) fixerLog.textContent = '✅ DOM restored from QuantumLedger backup. System stable.';
+        const fixerLog = document.getElementById('log-bugfixer-z');
+        if (fixerLog) fixerLog.textContent = 'CRITICAL: Data stream anomaly detected in Quantum Ledger display. Analyzing function integrity...';
 
-        corruptionStatus.textContent = 'AGI_BugFixerZ has restored system integrity.';
+        await new Promise(res => setTimeout(res, 2500));
+        if (fixerLog) fixerLog.textContent = 'Analysis complete. `renderTx` function hash mismatch. Restoring from DNA server backup...';
+        
+        // "Fix" the function by restoring the original
+        window.renderTx = originalFunctions.renderTx;
+        renderLedger(); // Re-render with the fixed function
+        if (fixerLog) {
+            fixerLog.style.color = 'var(--success-color)';
+            fixerLog.textContent = 'SUCCESS: `renderTx` function restored. Ledger integrity is stable.';
+            setTimeout(() => {
+                fixerLog.style.color = '#ccc';
+                fixerLog.textContent = 'Monitoring system for anomalies...';
+            }, 3000);
+        }
+
+        corruptionStatus.textContent = 'AGI_BugFixerZ has detected and repaired the data corruption in the ledger display.';
         corruptionStatus.style.color = 'var(--success-color)';
         
         simulateCorruptionBtn.disabled = false;
@@ -2305,6 +2616,7 @@ module.exports = async (req, res) => {
     const OIL_BITCOIN_PROMPT = "You are an enthusiastic crypto evangelist. Write a short, exciting document for a webpage titled 'OilBitcoin Reserve'. The document should describe a fictional cryptocurrency called OilBitcoin, which is backed by oil reserves. Explain its future potential for creating capital wealth flow and its stability. Use marketing language and bullet points for key features. The tone should be futuristic and optimistic. Format it with a main heading, a few subheadings in bold, and paragraphs. Add an emoji related to oil or money in the main heading.";
 
     function markdownToHtml(md) {
+        if (!md) return '';
         const lines = md.split('\n');
         let html = '';
         let inList = false;
@@ -2356,6 +2668,11 @@ module.exports = async (req, res) => {
 
     function logToTraderConsole(message) {
         if (!autoTraderLog) return;
+        // Clear initial message
+        if (autoTraderLog.childElementCount === 1 && autoTraderLog.firstElementChild.tagName === 'P') {
+            autoTraderLog.innerHTML = '';
+        }
+
         const p = document.createElement('div');
         p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
         autoTraderLog.prepend(p);
@@ -2398,15 +2715,15 @@ module.exports = async (req, res) => {
             if (walletBalance !== undefined) {
                 const balance = parseFloat(walletBalance).toFixed(6);
                 /* @tweakable Format for the admin user's balance display. Use {balance} as a placeholder. */
-                const balanceTextFormat = `💰 Balance: {balance} BTC`;
+                const balanceTextFormat = ` Balance: {balance} BTC`;
                 /* @tweakable Format for the admin user's phone display. Use {phone} as a placeholder. */
-                const phoneTextFormat = `📱 Phone: {phone}`;
+                const phoneTextFormat = ` Phone: {phone}`;
                 /* @tweakable Format for the admin user's mine count. Use {mines} as a placeholder. */
-                const minesTextFormat = `⛏️ Mines: {mines}`;
+                const minesTextFormat = ` Mines: {mines}`;
                 /* @tweakable Format for the online user count when admin is logged in. */
-                const onlineTextFormat = `🟢 1 user(s) online`;
+                const onlineTextFormat = `  ${BASE_ONLINE_USERS} user(s) online`;
                 /* @tweakable Format for the admin's last seen status. */
-                const lastSeenTextFormat = `⏰ Last Seen: just now`;
+                const lastSeenTextFormat = ` Last Seen: just now`;
 
                 if (userBalanceEl) userBalanceEl.textContent = balanceTextFormat.replace('{balance}', balance);
                 if (userPhoneEl) userPhoneEl.textContent = phoneTextFormat.replace('{phone}', phone);
@@ -2419,13 +2736,13 @@ module.exports = async (req, res) => {
 
             } else {
                  /* @tweakable Text to display for admin balance if not found in GitHub. */
-                const balanceNotFoundText = `💰 Balance: 0.00 BTC (Not Found)`;
+                const balanceNotFoundText = ` Balance: 0.00 BTC (Not Found)`;
                 if (userBalanceEl) userBalanceEl.textContent = balanceNotFoundText;
             }
     
         } catch (err) {
             console.error('Error loading admin wallet data:', err);
-            if (userBalanceEl) userBalanceEl.textContent = `💰 Balance: Error loading`;
+            if (userBalanceEl) userBalanceEl.textContent = ` Balance: Error loading`;
         }
     }
 
@@ -2433,6 +2750,8 @@ module.exports = async (req, res) => {
     navLinks.forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); navigateTo(link.getAttribute('href').substring(1)); }));
     connectForm.addEventListener('submit', handleRequestOtp);
     otpForm.addEventListener('submit', handleVerifyOtp);
+    pinSetupForm.addEventListener('submit', handleSetPin);
+    pinLoginForm.addEventListener('submit', handlePinLogin);
     disconnectBtn.addEventListener('click', disconnect);
     toggleMiningStatsBtn.addEventListener('click', () => { const isHidden = miningStatsView.style.display === 'none'; miningStatsView.style.display = isHidden ? 'block' : 'none'; toggleMiningStatsBtn.textContent = isHidden ? 'Hide Mining Stats / Credentials' : 'Display Mining Stats / Credentials'; });
     sendForm.addEventListener('submit', handleSend);
@@ -2469,21 +2788,24 @@ module.exports = async (req, res) => {
     
     Start with an overview of the **AGI AI Operational Environment**:
     - Mention the 'AGI_RAN' (Real-time AGI Reasoning Access Network), 'AI_RAN' (AI-powered Accelerated Reasoning Fabric), and the 'COMpart AGI-RAN' (Cross-operational multi-agent quantum compute mesh).
+    - Describe the 'Neuron Network' fabric with Neuron Chips, Neuron CPUs, and Neuron QPUs for improving qubit stability and reducing error corrections via superposition and entanglement.
     
     Describe the **Hybrid Compute Pipeline**:
     - Backend: Node.js (NestJS, TypeScript).
     - Database: Geo-replicated PostgreSQL.
     - Containerization: Docker/Kubernetes.
     - Consensus Mechanism: Quantum Proof-of-Synergy.
-    - Quantum Layer: Explain the 'Quantum Fusion Fabric' which orchestrates QPUs, GPUs (mention NVLink-accelerated GB200 NVL72), and CPUs. Mention 'cuQuantum' and 'CUDA-Q' as the execution layer.
+    - Quantum Layer: Explain the 'Quantum Fusion Fabric' which orchestrates QPUs, GPUs (mention NVLink-accelerated GB200 NVL72), CPUs, and IPUs. Mention 'cuQuantum' and 'CUDA-Q' as the execution layer for algorithms like Shor's.
+    - AI Processors: Mention the integration of specialist chips like 'Ai CMPS (Crypto Mining Processors)', 'RDNA', 'IPU', and 'NPU SERVER' nodes.
     
     Explain the **Data and Storage Layer**:
+    - Total Ecosystem Size: 954,433.5 TB.
     - Detail the 'Quantum Memory Nodes' which are DNS-linked and decentralized.
-    - Describe the 'DNA Servers' used for AI genome encoding for long-term intelligence expansion.
+    - Describe the 'DNA Servers' used for AI genome encoding for long-term intelligence expansion and permanent wallet state storage.
     
     Cover **Autonomous System Management**:
     - Explain how the system uses a 'Fibonacci AGI Loop' for data expansion and memory patterning.
-    - Mention self-evaluation routines and cross-device optimization.
+    - Mention self-evaluation routines and cross-device optimization powered by AGI agents with self-learning algorithms.
     
     Finally, add a section on **Secure Environment Configuration**:
     - Explain the use of a .env file and the 'dotenv' package in Node.js. Provide a sample .env file code block, including '${GITHUB_TOKEN_ENV_VAR}', 'OPENAI_API_KEY', 'XAI_API_KEY', and 'CLAUDE_API_KEY' set to example values. Comment that it must be kept private.
@@ -2525,12 +2847,12 @@ module.exports = async (req, res) => {
         const cellularStates = ['Connected', 'Syncing', 'High-Traffic'];
         const ispStates = ['Optimal', 'Rerouting', 'Throttled'];
         const satelliteStates = ['Standby', 'Active Link', 'Syncing'];
-        const dnaStates = ['Healthy', 'Replicating Genome', 'Verifying'];
+        const systemScaleStatus = ['Healthy', 'Replicating Genome', 'Verifying'];
 
         if (cellularStatus) cellularStatus.textContent = cellularStates[Math.floor(Math.random() * cellularStates.length)];
         if (ispStatus) ispStatus.textContent = ispStates[Math.floor(Math.random() * ispStates.length)];
         if (satelliteStatus) satelliteStatus.textContent = satelliteStates[Math.floor(Math.random() * satelliteStates.length)];
-        if (dnaSyncStatus) dnaSyncStatus.textContent = dnaStates[Math.floor(Math.random() * dnaStates.length)];
+        if (dnaSyncStatus) dnaSyncStatus.textContent = systemScaleStatus[Math.floor(Math.random() * systemScaleStatus.length)];
     
         // Update Compute Stack
         const executionStates = ['Idle', 'Executing QFT', 'Compiling', 'Verifying'];
@@ -2554,12 +2876,15 @@ module.exports = async (req, res) => {
     function init() {
         populateContentPages();
 
+        // Store original functions for self-healing simulation
+        originalFunctions.renderTx = window.renderTx;
+
         updatePhoneInput.value = DEFAULT_INJECTION_PHONE;
         newBalanceInput.value = DEFAULT_INJECTION_BALANCE;
         
         // The main subscription that drives all real-time updates
         room.collection('transaction_v3').subscribe(transactions => {
-            state.allTransactions = transactions.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            state.allTransactions = transactions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
             const maxBlock = Math.max(0, ...state.allTransactions.map(tx => tx.blockNumber || 0));
             state.currentBlockNumber = maxBlock;
@@ -2571,11 +2896,10 @@ module.exports = async (req, res) => {
             }
         });
 
-        // Subscription for wallet changes. The miner growth chart is now static and rendered on page navigation.
-        // This subscription can be used for other real-time updates on the leaderboard page.
         room.collection('wallet_v3').subscribe(wallets => {
-            // The chart is now static. This is a good place for any other
-            // dynamic leaderboard content that needs to react to wallet changes.
+            if (leaderboardPage.classList.contains('active')) {
+                loadLeaderboard();
+            }
         });
 
         room.collection('generated_sites_v1').subscribe(renderSiteGallery);
@@ -2585,7 +2909,7 @@ module.exports = async (req, res) => {
             connectWallet(lastPhone);
         } else {
             updateUI();
-        }
+        };
         
         navigateTo('home-page');
     }
