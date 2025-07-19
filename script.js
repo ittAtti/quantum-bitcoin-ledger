@@ -13,11 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const MINER_GROWTH_CHART_LINE_COLOR = 'limegreen';
     /* @tweakable The background color for the area under the line on the miner growth chart. */
     const MINER_GROWTH_CHART_BG_COLOR = 'rgba(50, 205, 50, 0.1)';
-    /* @tweakable The static data for the simulated miner growth chart endpoint. */
-    const SIMULATED_MINER_GROWTH_DATA = {
-        dates: ["2025-06-07", "2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13"],
-        counts: [3, 8, 12, 10, 14, 19, 23]
-    };
+    /* @tweakable The number of days to show on the dynamic miner growth chart. */
+    const MINER_GROWTH_CHART_DAYS = 7;
     /* @tweakable The phone number for the admin user, who gets access to sensitive functions. This is a security-critical setting. */
     const ADMIN_PHONE = "1111100000";
     /* @tweakable A master OTP that will always work for any phone number, as per the fake backend verification logic. */
@@ -54,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const MASTER_AUTH_TOKEN = "master-token-for-admin-access-simulation";
     /* @tweakable The name of the environment variable used to store the GitHub token in the backend simulation. */
     const GITHUB_TOKEN_ENV_VAR = "GITHUB_TOKEN";
+    /* @tweakable The name of the environment variable for the database connection URL. */
+    const DATABASE_URL_ENV_VAR = "DATABASE_URL";
     /* @tweakable A list of simulated AGI agent names for the Quantum Chat. */
     const AGI_CHAT_AGENTS = ["AGI_BlockBuilder", "AGI_Optimizer", "AGI_ArchitectX", "AGI_BugFixerZ", "AGI_SelfRebuilder"];
     /* @tweakable A list of simulated actions for the Quantum Chat AGI agents. */
@@ -91,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* @tweakable The commit message used when auto-syncing all wallets to GitHub. */
     const WALLET_SYNC_COMMIT_MESSAGE = "feat: Auto-sync all wallet states from Quantum Ledger";
     /* @tweakable Price of BTC in USD for dashboard chart. */
-    const btcPrice = 60000;
+    let btcPrice = 60000;
     /* @tweakable Price of OilBitcoin in USD for dashboard chart. */
     const oilBtcPrice = 1000;
     /* @tweakable Base reward for AI mining BTC. */
@@ -120,12 +119,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_SIMULATION_DELAY = 500;
     /* @tweakable Delay in ms to simulate the backend restart and token verification process. */
     const RESTART_VERIFICATION_DELAY = 800;
-    /* @tweakable The simulated initial state of the wallet database on GitHub. Used by the manual update simulation. The keys are phone numbers and values are BTC balances. */
+    /* @tweakable The simulated initial state of the wallet database on GitHub. Used by the manual update simulation. The keys are phone numbers and values are wallet objects. */
     const SIMULATED_GITHUB_DB_STATE = {
-        "1112223333": 0.1,
-        "4445556666": 1.2,
-        "9876543210": 10.5,
-        "1234567890": 0.0025
+        "1112223333": { "balance": 0.1 },
+        "4445556666": { "balance": 1.2 },
+        "9876543210": { "balance": 10.5 },
+        "1234567890": { "balance": 0.0025 },
+        /* @tweakable The default balance for the admin user in the simulated GitHub database. */
+        "1111100000": { 
+            "balance": 0.0056,
+            /* @tweakable The amount of BTC the admin user has staked in the simulated GitHub database. */
+            "stakedAmount": 1.5,
+            /* @tweakable The unclaimed rewards for the admin user in the simulated GitHub database. */
+            "earnedRewards": 0.025,
+            /* @tweakable Whether the auto-trader is enabled for the admin user in the simulated GitHub database. */
+            "isAutoTraderEnabled": true 
+        }
     };
 
     /* @tweakable The title for the AGI Site Forge page. */
@@ -196,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendForm = document.getElementById('send-form');
     const recipientAddressInput = document.getElementById('recipient-address');
     const sendAmountInput = document.getElementById('send-amount');
+    const sendMemoInput = document.getElementById('send-memo');
     const sendStatus = document.getElementById('send-status');
 
     const mempoolList = document.getElementById('mempool-list');
@@ -285,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const leaderboardPage = document.getElementById('leaderboard-page');
     const minerGrowthChartCanvas = document.getElementById('minerChart');
     const restartBackendBtn = document.getElementById('restart-backend-btn');
+    const backendLiveBtcPriceEl = document.getElementById('backend-live-btc-price');
 
     // --- SITE FORGE ELEMENTS ---
     const siteForgePage = document.getElementById('site-forge-page');
@@ -297,6 +308,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const generatedSitePreview = document.getElementById('generated-site-preview');
     const generatedSiteIframe = document.getElementById('generated-site-iframe');
     const siteGallery = document.getElementById('site-gallery');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+
+    // --- MOONPAY SIMULATION ---
+    /* @tweakable The simulated one-time URL template for MoonPay withdrawals. Use {apiKey} as a placeholder. */
+    const SIMULATED_MOONPAY_URL_TEMPLATE = "https://buy.moonpay.com?apiKey={apiKey}&currencyCode=btc";
+    /* @tweakable The public key for the simulated MoonPay integration. */
+    const SIMULATED_MOONPAY_PUBLIC_KEY = "pk_test_1234567890_abcdefg";
+    /* @tweakable The message to display when a non-admin user tries to access the MoonPay withdrawal feature. */
+    const MOONPAY_UNAUTHORIZED_MESSAGE = "Withdrawal feature is currently available for admin users only.";
 
     // --- CONSTANTS & STATE ---
     const MANUAL_UPDATE_ENDPOINT = API_BASE_PATH + WALLET_UPDATE_PATH;
@@ -585,7 +605,7 @@ jobs:
         return { balance, oilBitcoinBalance, balanceHistory };
     }
 
-    // --- Wallet Connection Logic (Refactored based on user prompt) ---
+    // --- WALLET CONNECTION LOGIC (Refactored based on user prompt) ---
 
     async function handleRequestOtp(e) {
         e.preventDefault();
@@ -707,6 +727,7 @@ jobs:
                     earnedRewards: 0,
                     isAutoTraderEnabled: false,
                     autoTraderPnL: 0,
+                    lastRewardCalculationTimestamp: Date.now(), // Initialize timestamp for reward calculation
                     lastSeen: new Date().toISOString()
                 });
             }
@@ -779,6 +800,7 @@ jobs:
           earnedRewards: 0,
           isAutoTraderEnabled: false,
           autoTraderPnL: 0,
+          lastRewardCalculationTimestamp: Date.now(), // Initialize timestamp for reward calculation
           lastSeen: new Date().toISOString()
       });
       return walletRecord;
@@ -900,7 +922,8 @@ jobs:
         e.preventDefault();
         const recipient = recipientAddressInput.value.trim();
         const amount = parseFloat(sendAmountInput.value);
-
+        const memoText = sendMemoInput.value.trim();
+    
         sendStatus.classList.remove('error-message');
         sendStatus.textContent = '';
         
@@ -919,31 +942,64 @@ jobs:
             sendStatus.classList.add('error-message');
             return;
         }
-
+        if (memoText && memoText.length > 50) {
+            sendStatus.textContent = `Memo cannot exceed 50 characters.`;
+            sendStatus.classList.add('error-message');
+            return;
+        }
+    
         try {
+            let finalRecipientAddress = recipient;
+            
+            // Check if recipient is a phone number
+            const cleanedRecipient = recipient.replace(/\D/g, '');
+            if (/^\d{7,15}$/.test(cleanedRecipient)) { // Simple regex for phone numbers
+                sendStatus.textContent = "Looking up recipient by phone number...";
+                const recipientPhoneHash = await sha256(cleanedRecipient);
+                const recipientWallets = await room.collection('wallet_v3').filter({ phoneHash: recipientPhoneHash }).getList();
+                const recipientWallet = recipientWallets[0];
+
+                if (recipientWallet && recipientWallet.address) {
+                    finalRecipientAddress = recipientWallet.address;
+                    sendStatus.textContent = `Found recipient wallet: ${maskPhoneNumber(cleanedRecipient)}`;
+                } else {
+                    sendStatus.textContent = "Recipient not found.";
+                    sendStatus.classList.add('error-message');
+                    return;
+                }
+            }
+    
+            // Basic validation for the final address
+            if (!finalRecipientAddress.startsWith('1q')) {
+                sendStatus.textContent = "Invalid recipient address.";
+                sendStatus.classList.add('error-message');
+                return;
+            }
+
             const txData = {
                 from: state.currentUser.address,
-                to: recipient,
+                to: finalRecipientAddress,
                 amount: amount,
                 currency: 'BTC',
                 timestamp: new Date().toISOString(),
                 status: 'mempool',
                 blockNumber: null,
+                memo: memoText ? { note: memoText } : null
             };
-
+    
             const newTx = await room.collection('transaction_v3').create(txData);
             
             // Optimistic UI update
             walletBalance.classList.add('scale-out');
             setTimeout(() => walletBalance.classList.remove('scale-out'), 500);
-
+    
             sendForm.reset();
             sendStatus.textContent = `TX ${newTx.id.slice(0, 8)} submitted to mempool. Multiple Quantum AGI confirming...`;
             setTimeout(() => sendStatus.textContent = '', 5000);
             
             // Generate smart contract for the transaction
-            generateAndShowSmartContract('transfer', { amount: amount.toFixed(8), recipient: recipient });
-
+            generateAndShowSmartContract('transfer', { amount: amount.toFixed(8), recipient: finalRecipientAddress });
+    
         } catch (error) {
             console.error("Error sending transaction:", error);
             sendStatus.textContent = "An error occurred while sending the transaction. Please try again.";
@@ -1099,7 +1155,7 @@ jobs:
         if (!userStatsBar) return;
 
         const onlineUsers = BASE_ONLINE_USERS + Math.floor(Math.random() * ONLINE_USER_VARIATION);
-        if (usersOnlineEl) usersOnlineEl.textContent = `  ${onlineUsers} user(s) online`;
+        if(usersOnlineEl) usersOnlineEl.textContent = `  ${onlineUsers} user(s) online`;
 
         if (state.currentUser) {
             userStatsBar.style.display = 'flex';
@@ -1148,7 +1204,7 @@ jobs:
     function updateSiteForgePage() {
         if (!siteForgePage) return;
         siteForgePage.querySelector('h2').textContent = SITE_FORGE_PAGE_TITLE;
-        siteForgePage.querySelector('p:not([class])').textContent = SITE_FORGE_PAGE_DESCRIPTION;
+        siteForgePage.querySelector('p').textContent = SITE_FORGE_PAGE_DESCRIPTION;
         if (siteForgePromptInput) siteForgePromptInput.placeholder = SITE_FORGE_PROMPT_PLACEHOLDER;
         
         if (state.currentUser) {
@@ -1177,18 +1233,46 @@ jobs:
             return; // Don't render if page is not visible or element not found
         }
     
-        // Simulate fetching data from a static API endpoint like '/api/miner-growth'
-        const data = await new Promise(resolve => {
-            setTimeout(() => {
-                resolve(SIMULATED_MINER_GROWTH_DATA);
-            }, 300); // Simulate network latency
+        const wallets = await room.collection('wallet_v3').getList();
+        
+        const countsByDay = {};
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+    
+        // Initialize the last N days
+        for (let i = 0; i < MINER_GROWTH_CHART_DAYS; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - i);
+            const dateString = date.toISOString().split('T')[0];
+            countsByDay[dateString] = 0;
+        }
+    
+        // Count wallets created in the last N days
+        wallets.forEach(wallet => {
+            if (wallet.created_at) {
+                const createdAt = new Date(wallet.created_at);
+                const diffTime = today - createdAt;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+                if (diffDays <= MINER_GROWTH_CHART_DAYS) {
+                    const dateString = createdAt.toISOString().split('T')[0];
+                    if (countsByDay.hasOwnProperty(dateString)) {
+                         countsByDay[dateString]++;
+                    } else {
+                        // This handles cases where a wallet was created today but before the loop initialization
+                         countsByDay[dateString] = 1;
+                    }
+                }
+            }
         });
-
+    
+        const sortedDates = Object.keys(countsByDay).sort((a, b) => new Date(a) - new Date(b));
+    
         const chartData = {
-            labels: data.dates.map(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, {month: 'short', day: 'numeric'})),
+            labels: sortedDates.map(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, {month: 'short', day: 'numeric'})),
             datasets: [{
                 label: 'New Miners per Day',
-                data: data.counts,
+                data: sortedDates.map(date => countsByDay[date]),
                 borderColor: MINER_GROWTH_CHART_LINE_COLOR,
                 backgroundColor: MINER_GROWTH_CHART_BG_COLOR,
                 tension: 0.4,
@@ -1209,7 +1293,7 @@ jobs:
                     scales: { 
                         y: { 
                             beginAtZero: true, 
-                            ticks: { color: 'var(--text-color)', stepSize: 5 } 
+                            ticks: { color: 'var(--text-color)', stepSize: 1 } 
                         }, 
                         x: { ticks: { color: 'var(--text-color)' }} 
                     },
@@ -1222,11 +1306,6 @@ jobs:
     function secureAdminUI() {
         const architectureLink = document.getElementById('architecture-icon');
         const backendLink = document.getElementById('backend-icon');
-
-        // This is a safety measure from the user prompt to remove any accidentally rendered secrets.
-        const envElements = document.querySelectorAll('.env, .env-content, pre.env');
-        envElements.forEach(el => el.remove());
-
         const isAdmin = state.currentUser && state.currentUser.phone === ADMIN_PHONE;
 
         if (architectureLink) architectureLink.style.display = isAdmin ? 'inline-block' : 'none';
@@ -1238,17 +1317,25 @@ jobs:
     }
 
     /**
+     * Generates the code string for the .github/workflows/deploy.yml file.
+     * This demonstrates what a real GitHub Actions workflow for a Node.js backend would look like.
+     * @returns {string} The formatted code string.
+     */
+    function getSimulatedWorkflowContent() {
+        return SIMULATED_WORKFLOW_CONTENT;
+    }
+
+    /**
      * Generates the code string for the simulated serverless function.
      * This demonstrates what a real Node.js backend endpoint would look like.
      * @returns {string} The formatted code string.
      */
     function getApiWalletRouteCode() {
-        /* @tweakable The content of the simulated /api/update-wallet.js file. */
         const code = `
 // /api/update-wallet.js
 // This is a simulated serverless function for a Node.js environment (e.g., Vercel).
 require('dotenv').config();
-// In a real project, you would install this with 'npm install @octokit/rest'
+// In a real project, you'd install this with 'npm install @octokit/rest'
 // const { Octokit } = require("@octokit/rest");
 
 // Initialize Octokit with the GitHub token from environment variables
@@ -1333,6 +1420,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const XAI_API_KEY = process.env.XAI_API_KEY;
 /* @tweakable The name of the environment variable for the GitHub Token. */
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+/* @tweakable The name of the environment variable for the database connection URL. */
+const DATABASE_URL = process.env.${DATABASE_URL_ENV_VAR};
 /* @tweakable The phone number for the admin user, loaded from environment variables. */
 const ADMIN_PHONE = process.env.ADMIN_PHONE;
 /* @tweakable The phone number for the 'silly' user, loaded from environment variables. */
@@ -1400,7 +1489,7 @@ app.post('/api/wallet/update', verifyToken, (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
-});
+};
 
 
 // --- Vercel Export ---
@@ -1414,11 +1503,14 @@ module.exports = app;
         githubTokenEnvVarDisplay.textContent = GITHUB_TOKEN_ENV_VAR;
         if(apiWalletRouteCodeEl) apiWalletRouteCodeEl.textContent = getApiWalletRouteCode().trim();
         if(expressServerCodeEl) expressServerCodeEl.textContent = getExpressServerCode().trim();
-        if(githubActionsCodeEl) githubActionsCodeEl.textContent = SIMULATED_WORKFLOW_CONTENT.trim();
+        if(githubActionsCodeEl) githubActionsCodeEl.textContent = getSimulatedWorkflowContent().trim();
         if (envVarsContainer) {
             envVarsContainer.innerHTML = `
                  <div class="env-var">
                     <span class="mono">${GITHUB_TOKEN_ENV_VAR}</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
+                </div>
+                <div class="env-var">
+                    <span class="mono">${DATABASE_URL_ENV_VAR}</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
                 </div>
                 <div class="env-var">
                     <span class="mono">OPENAI_API_KEY</span>=<span class="mono" style="color: var(--error-color);">[REDACTED_FOR_SECURITY]</span> <span style="color: var(--success-color);"> Loaded</span>
@@ -1455,14 +1547,22 @@ module.exports = app;
     }
 
     function renderTx(tx) {
-        const memo = (typeof tx.memo === 'object' && tx.memo !== null) ? JSON.stringify(tx.memo) : tx.memo;
+        const memo = (typeof tx.memo === 'object' && tx.memo !== null && tx.memo.note) ? tx.memo.note : null;
+        const inscriptionMemo = (typeof tx.memo === 'object' && tx.memo !== null) ? JSON.stringify(tx.memo) : tx.memo;
+        let memoHtml = '';
+        if (tx.currency === 'INSCRIPTION') {
+            memoHtml = `<div class="tx-details" style="flex-basis: 100%; font-style: italic; color: #aaa;"><strong>Memo:</strong> ${inscriptionMemo.length > 50 ? inscriptionMemo.slice(0, 50) + '...' : inscriptionMemo}</div>`;
+        } else if (memo) {
+            memoHtml = `<div class="tx-details" style="flex-basis: 100%; font-style: italic; color: #aaa;"><strong>Memo:</strong> ${memo.length > 50 ? memo.slice(0, 50) + '...' : memo}</div>`;
+        }
+    
         return `
             <div class="transaction-item">
                 <div class="tx-details"><strong>TXID:</strong> ${tx.id.slice(0, 8)}...</div>
                 <div class="tx-details"><strong>From:</strong> <span class="mono">${tx.from.length > 20 ? tx.from.slice(0,12) + '...' : tx.from}</span></div>
                 <div class="tx-details"><strong>To:</strong> <span class="mono">${tx.to.length > 20 ? tx.to.slice(0,12) + '...' : tx.to}</span></div>
                 <div class="tx-details"><strong>Amount:</strong> <span>${(tx.amount || 0).toFixed(8)} ${tx.currency}</span></div>
-                ${memo ? `<div class="tx-details" style="flex-basis: 100%; font-style: italic; color: #aaa;"><strong>Memo:</strong> ${memo.length > 50 ? memo.slice(0, 50) + '...' : memo}</div>` : ''}
+                ${memoHtml}
             </div>
         `;
     }
@@ -1552,10 +1652,20 @@ module.exports = app;
         e.preventDefault();
         if (!state.currentUser) return;
 
-        const amount = parseFloat(stakeAmountInput.value);
+        /* @tweakable The virtual address representing the Inscription Protocol. */
+        const INSCRIPTION_PROTOCOL_ADDRESS = 'QuantumInscriptionProtocol';
+        /* @tweakable The message displayed when a user has no inscriptions. */
+        const INSCRIPTIONS_EMPTY_MESSAGE = '<p>No inscriptions found. Create one above!</p>';
+        /* @tweakable The message for an inscription that has no name. */
+        const INSCRIPTION_UNTITLED_TEXT = 'Untitled Inscription';
+        /* @tweakable The message to display while inscriptions are loading. */
+        const INSCRIPTIONS_LOADING_MESSAGE = '<p>Loading inscriptions from the Quantum Ledger...</p>';
+        
         dappStatusEl.textContent = '';
         dappStatusEl.classList.remove('error-message');
-
+    
+        const amount = parseFloat(stakeAmountInput.value);
+    
         if (!amount || amount <= 0) {
             dappStatusEl.textContent = 'Please enter a valid amount to stake.';
             dappStatusEl.classList.add('error-message');
@@ -1608,7 +1718,7 @@ module.exports = app;
                 stakedAmount: 0,
                 earnedRewards: 0
             });
-            
+
             // Local state update after successful persistence
             state.currentUser.balance += (amountStaked + rewards);
             state.currentUser.stakedAmount = 0;
@@ -1645,6 +1755,10 @@ module.exports = app;
      * @tweakable The message for an inscription that has no name.
      */
     const INSCRIPTION_UNTITLED_TEXT = 'Untitled Inscription';
+    /**
+     * @tweakable The message to display while inscriptions are loading.
+     */
+    const INSCRIPTIONS_LOADING_MESSAGE = '<p>Loading inscriptions from the Quantum Ledger...</p>';
     
     /**
      * Renders the current user's inscriptions into the list.
@@ -1652,9 +1766,7 @@ module.exports = app;
     function renderUserInscriptions() {
         if (!userInscriptionsList || !state.currentUser) return;
     
-        const userInscriptions = state.allTransactions.filter(
-            tx => tx.currency === 'INSCRIPTION' && tx.from === state.currentUser.address
-        );
+        const userInscriptions = room.collection('inscriptions_v1').filter({ owner_address: state.currentUser.address }).getList();
     
         if (userInscriptions.length === 0) {
             userInscriptionsList.innerHTML = INSCRIPTIONS_EMPTY_MESSAGE;
@@ -1662,15 +1774,14 @@ module.exports = app;
         }
     
         // Sort from newest to oldest
-        userInscriptions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        userInscriptions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
-        const inscriptionsHtml = userInscriptions.map(tx => {
-            const memo = typeof tx.memo === 'object' && tx.memo !== null ? tx.memo : {};
-            const name = memo.name || INSCRIPTION_UNTITLED_TEXT;
-            const type = memo.type || 'text';
-            const data = memo.data || 'No data available';
-            const statusColor = tx.status === 'confirmed' ? 'var(--success-color)' : 'var(--secondary-accent)';
-            const blockInfo = tx.status === 'confirmed' ? `Block: #${tx.blockNumber}` : 'Status: In Mempool';
+        const inscriptionsHtml = userInscriptions.map(inscription => {
+            const name = inscription.name || INSCRIPTION_UNTITLED_TEXT;
+            const type = inscription.type || 'text';
+            const data = inscription.data || 'No data available';
+            const statusColor = inscription.status === 'confirmed' ? 'var(--success-color)' : 'var(--secondary-accent)';
+            const blockInfo = inscription.status === 'confirmed' ? `Status: Confirmed` : 'Status: In Mempool';
     
             let dataPreview;
             if (type === 'image') {
@@ -1688,7 +1799,7 @@ module.exports = app;
                     </div>
                     <div style="font-size: 0.85rem;"><strong>Type:</strong> ${type}</div>
                     ${dataPreview}
-                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.5rem;">TXID: ${tx.id.slice(0,12)}...</div>
+                    <div style="font-size: 0.75rem; color: #888; margin-top: 0.5rem;">TXID: ${inscription.tx_id.slice(0,12)}...</div>
                 </div>
             `;
         }).join('');
@@ -1698,12 +1809,16 @@ module.exports = app;
 
     async function handleInscription(e) {
         e.preventDefault();
-        if (!state.currentUser) return;
+        if (!state.currentUser) {
+            inscriptionStatus.textContent = 'You must be connected to create an inscription.';
+            inscriptionStatus.classList.add('error-message');
+            return;
+        }
     
         const type = inscriptionTypeInput.value;
         const data = inscriptionDataInput.value.trim();
         const name = inscriptionNameInput.value.trim();
-    
+
         inscriptionStatus.textContent = '';
         inscriptionStatus.classList.remove('error-message');
     
@@ -1716,7 +1831,7 @@ module.exports = app;
         // We represent inscriptions as a transaction with 0 amount and a special currency/memo
         const inscriptionTxData = {
             from: state.currentUser.address,
-            to: 'QuantumInscriptionProtocol', // A virtual address for the protocol
+            to: INSCRIPTION_PROTOCOL_ADDRESS,
             amount: 0,
             currency: 'INSCRIPTION',
             timestamp: new Date().toISOString(),
@@ -1729,8 +1844,19 @@ module.exports = app;
         };
     
         try {
-            await room.collection('transaction_v3').create(inscriptionTxData);
-            inscriptionStatus.textContent = `Successfully submitted inscription '${name}' to the mempool for confirmation.`;
+            const newTx = await room.collection('transaction_v3').create(inscriptionTxData);
+
+            // Also create a record in the new inscriptions table
+            await room.collection('inscriptions_v1').create({
+                owner_address: state.currentUser.address,
+                name: name,
+                type: type,
+                data: data,
+                tx_id: newTx.id,
+                status: 'mempool'
+            });
+
+            inscriptionStatus.textContent = `TX ${newTx.id.slice(0, 8)} submitted to mempool.`;
             inscriptionForm.reset();
             generateAndShowSmartContract('inscription', { name });
             setTimeout(() => { inscriptionStatus.textContent = '' }, 5000);
@@ -1799,13 +1925,13 @@ module.exports = app;
                     { role: 'user', content: userPrompt }
                 ]
             });
-    
             let htmlCode = completion.content;
+            // Clean up the response to get just the code
             const codeMatch = htmlCode.match(/```(?:html)?\s*([\s\S]*?)```/);
             if (codeMatch) {
                 htmlCode = codeMatch[1].trim();
             }
-    
+            // Save the site to the database
             await room.collection('generated_sites_v1').create({
                 prompt: userPrompt,
                 html_code: htmlCode,
@@ -1874,7 +2000,7 @@ module.exports = app;
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || `API request failed with status ${response.status}`);
+                throw new Error(`API request failed with status ${response.status}`);
             }
             
             // Balance is in Satoshis, convert to BTC
@@ -1915,7 +2041,7 @@ module.exports = app;
         const GITHUB_REPO_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
         log(`[SERVER] [VERIFICATION] GET ${GITHUB_REPO_API_URL}`, false, 'SERVER');
         log(`[SERVER] [VERIFICATION] Authorization: token ***${SIMULATED_GITHUB_TOKEN.slice(-4)}`, false, 'SERVER');
-        await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY));
+        await new Promise(res => setTimeout(res, 1000));
         
         log('[SERVER] [VERIFICATION]  Test request successful. GitHub token is valid. API connection confirmed.', false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY / 2));
@@ -1963,7 +2089,7 @@ module.exports = app;
             return;
         }
 
-        backendLogOutput.innerHTML = '<p>Serverless function logs will appear here...</p>'; // Clear log
+        backendLogOutput.innerHTML = '<div>Serverless function logs will appear here...</div>'; // Clear log
 
         log(`Client: Initiating wallet update for phone: ${phoneNumber}`);
         log(`Client: Simulating POST request to serverless function: ${MANUAL_UPDATE_ENDPOINT}`);
@@ -1975,6 +2101,7 @@ module.exports = app;
         log({ phoneNumber, balance: newBalance }, true, 'SERVER');
         log(`[INFO] Loading environment variables...`, false, 'SERVER');
         await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
+        
         log(`[INFO]  process.env.${GITHUB_TOKEN_ENV_VAR} loaded.`, false, 'SERVER');
         log(`[INFO] Note: This tool simulates updating a JSON file on GitHub. It does NOT affect the live wallet data in this app instance.`, false, 'SERVER');
 
@@ -1997,8 +2124,17 @@ module.exports = app;
 
             log(`[INFO] Step 2: Update wallet data in memory...`, false, 'SERVER');
             let walletData = JSON.parse(fakeDecodedContent);
-            walletData[phoneNumber] = newBalance;
-            log(`[INFO]  Wallet data for ${phoneNumber} updated to ${newBalance}.`, false, 'SERVER');
+            // --- BUG FIX: Check if wallet exists and is an object before updating ---
+            if (walletData[phoneNumber] && typeof walletData[phoneNumber] === 'object') {
+                // If it's a complex object (like the admin's), just update the balance
+                walletData[phoneNumber].balance = newBalance;
+                log(`[INFO]  Updated balance for existing wallet object: ${phoneNumber}.`, false, 'SERVER');
+            } else {
+                // Otherwise, create a new simple wallet object
+                walletData[phoneNumber] = { balance: newBalance };
+                 log(`[INFO]  Created/overwrote wallet object for: ${phoneNumber}.`, false, 'SERVER');
+            }
+            // --- END BUG FIX ---
             
             const updatedContentForLog = JSON.stringify(walletData, null, 2);
             const updatedContentBase64 = btoa(unescape(encodeURIComponent(updatedContentForLog)));
@@ -2050,9 +2186,9 @@ module.exports = app;
      */
     async function handleGitHubSync() {
         log(`Client: Manual sync to GitHub triggered.`, false, 'CLIENT');
-        log(`Client: Simulating POST request to serverless function: ${GITHUB_SYNC_ENDPOINT}`, false, 'CLIENT');
+        log(`Client: Simulating POST request to ${GITHUB_SYNC_ENDPOINT}`, false, 'CLIENT');
         await new Promise(res => setTimeout(res, API_SIMULATION_DELAY));
-
+        
         log(`--- START SERVERLESS FUNCTION LOGS (${GITHUB_SYNC_ENDPOINT}) ---`, false, 'SYSTEM');
         log(`[INFO] Function at ${GITHUB_SYNC_ENDPOINT} invoked.`, false, 'SERVER');
         
@@ -2078,7 +2214,7 @@ module.exports = app;
             const fakeSha = (await sha256(Math.random().toString())).slice(0, 40);
             log(`[INFO]  GitHub file fetched. Current SHA: ${fakeSha}`, false, 'SERVER');
 
-            log(`[INFO] Step 2: Preparing updated wallet database for commit...`, false, 'SERVER');
+            log(`[INFO] Step 2: Preparing updated wallet data for commit...`, false, 'SERVER');
             const updatedContentForLog = JSON.stringify(walletData, null, 2);
             const updatedContentBase64 = btoa(unescape(encodeURIComponent(updatedContentForLog)));
             log(`[INFO] New file content (Base64 encoded): ${updatedContentBase64.slice(0,50)}...`, false, 'SERVER');
@@ -2127,11 +2263,68 @@ module.exports = app;
     // AI Block Creator
     setInterval(async () => {
         try {
+            /* @tweakable If true, the block creator will update wallet balances in the database. If false, it only confirms transactions. This makes the simulation more realistic and keeps leaderboard data accurate. */
+            const UPDATE_WALLET_BALANCES_IN_DB = true;
+
             const txsToConfirm = state.allTransactions.filter(tx => tx.status === 'mempool').slice(0, TX_PER_BLOCK);
             
             if (txsToConfirm.length > 0) {
                 const newBlockNumber = state.currentBlockNumber + 1;
                 
+                // --- New logic to update wallet balances in DB ---
+                if (UPDATE_WALLET_BALANCES_IN_DB) {
+                    const balanceDeltas = new Map(); // address -> { btc_delta: 0 }
+
+                    for (const tx of txsToConfirm) {
+                        // Only handle BTC balance updates, as OILBTC is not persisted in the wallet schema.
+                        if (tx.currency !== 'BTC' || typeof tx.amount !== 'number') continue;
+
+                        const { from, to, amount } = tx;
+
+                        // Debit sender if it's a real wallet
+                        if (from && from.startsWith('1q')) {
+                            const delta = balanceDeltas.get(from) || { btc_delta: 0 };
+                            delta.btc_delta -= amount;
+                            balanceDeltas.set(from, delta);
+                        }
+
+                        // Credit receiver if it's a real wallet
+                        if (to && to.startsWith('1q')) {
+                            const delta = balanceDeltas.get(to) || { btc_delta: 0 };
+                            delta.btc_delta += amount;
+                            balanceDeltas.set(to, delta);
+                        }
+                    }
+
+                    // Now, apply the deltas to the persisted wallet records
+                    if (balanceDeltas.size > 0) {
+                        const allWallets = await room.collection('wallet_v3').getList();
+                        for (const wallet of allWallets) {
+                            if (balanceDeltas.has(wallet.address)) {
+                                const newBalance = (wallet.balance || 0) + balanceDeltas.get(wallet.address).btc_delta;
+                                await room.collection('wallet_v3').update(wallet.id, { balance: newBalance });
+                            }
+                        }
+                    }
+                }
+                // --- End of new logic ---
+
+                // --- New logic to confirm inscriptions in DB ---
+                const inscriptionTxs = txsToConfirm.filter(tx => tx.currency === 'INSCRIPTION');
+                if (inscriptionTxs.length > 0) {
+                    const allInscriptions = room.collection('inscriptions_v1').getList();
+                    for (const tx of inscriptionTxs) {
+                        const inscriptionToUpdate = allInscriptions.find(insc => insc.tx_id === tx.id);
+                        if (inscriptionToUpdate) {
+                            await room.collection('inscriptions_v1').update(inscriptionToUpdate.id, {
+                                status: 'confirmed'
+                            });
+                        }
+                    }
+                }
+                // --- End of inscription logic ---
+
+                // Finally, confirm all transactions after balances are calculated
                 for (const tx of txsToConfirm) {
                     await room.collection('transaction_v3').update(tx.id, {
                         status: 'confirmed',
@@ -2139,8 +2332,9 @@ module.exports = app;
                     });
                 }
             }
+
             const consensusMessages = ['Syncing blocks...', 'Verifying hashes...', 'Reaching consensus...', 'Finalizing block...'];
-            consensusStatusEl.textContent = consensusMessages[Math.floor(Math.random() * consensusMessages.length)];
+            if(consensusStatusEl) consensusStatusEl.textContent = consensusMessages[Math.floor(Math.random() * consensusMessages.length)];
         } catch (error) {
             console.error("AI Block Creator Error:", error);
         }
@@ -2573,7 +2767,7 @@ module.exports = app;
                 break;
             case 'enableTrader':
                 /* @tweakable The prompt used to generate a smart contract when enabling the AGI auto-trader. */
-                prompt = `Generate a simple Solidity smart contract named AGI_TraderControl. It should have a function to enable automated trading. Include comments explaining that enabling this delegates trading authority to an AGI agent. Respond ONLY with the Solidity code inside a single code block.`;
+                prompt = `Generate a simple Solidity smart contract named AGI_Tr!aderControl. It should have a function to enable automated trading. Include comments explaining that enabling this delegates trading authority to an AGI agent. Respond ONLY with the Solidity code inside a single code block.`;
                 break;
             case 'disableTrader':
                 /* @tweakable The prompt used to generate a smart contract when disabling the AGI auto-trader. */
@@ -2581,7 +2775,7 @@ module.exports = app;
                 break;
             case 'inscription':
                 /* @tweakable The prompt to generate a smart contract for a new inscription. */
-                prompt = `Generate a Solidity smart contract for a new NFT-like "Smart Satoshi" inscription. The contract should be named 'QuantumInscription' and include details like the owner's address, the inscription name ('${details.name}'), and a unique token ID. Respond ONLY with the Solidity code inside a single code block.`;
+                prompt = `Generate a Solidity smart contract for a new NFT-like "Smart Satoshi" inscription. The contract should be named 'QuantumInscription' and include details like the owner's address, the inscription name ('${details.name}'), and a unique token ID. Respond ONLY with the Solidity code inside a single markdown block.`;
                 break;
             default: return;
         }
@@ -2904,6 +3098,12 @@ module.exports = app;
 
         room.collection('generated_sites_v1').subscribe(renderSiteGallery);
 
+        room.collection('inscriptions_v1').subscribe(inscriptions => {
+            if (state.currentUser && document.getElementById('inscriptions-page').classList.contains('active')) {
+                renderUserInscriptions();
+            }
+        });
+
         const lastPhone = localStorage.getItem('lastConnectedPhone');
         if (lastPhone) {
             connectWallet(lastPhone);
@@ -2915,4 +3115,129 @@ module.exports = app;
     }
 
     init();
+
+    // Bitcoin Price Update
+    const COINGECKO_BTC_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
+    const BTC_PRICE_UPDATE_INTERVAL_MS = 60000;
+
+    async function fetchBitcoinPrice() {
+        try {
+            const response = await fetch(COINGECKO_BTC_PRICE_URL);
+            if (!response.ok) {
+                throw new Error(`CoinGecko API request failed with status ${response.status}`);
+            }
+            const data = await response.json();
+
+            if (data.bitcoin && data.bitcoin.usd) {
+                const newPrice = data.bitcoin.usd;
+                console.log(`Updated Bitcoin price: $${newPrice}`);
+                btcPrice = newPrice;
+                
+                // If dashboard is active, re-render it with the new price
+                if (document.getElementById('dashboard-page').classList.contains('active')) {
+                    renderOrUpdateDashboard();
+                }
+                if (backendLiveBtcPriceEl) {
+                    backendLiveBtcPriceEl.textContent = `$${newPrice.toLocaleString()}`;
+                }
+                // Add a log to the backend console if admin is viewing it
+                if (document.getElementById('backend-page').classList.contains('active')) {
+                    log(`[SYSTEM] Fetched real-time BTC price from CoinGecko: $${newPrice}`, false, 'SYSTEM');
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching Bitcoin price:", error);
+            if (backendLiveBtcPriceEl) {
+                backendLiveBtcPriceEl.textContent = `Error`;
+            }
+            if (document.getElementById('backend-page').classList.contains('active')) {
+                log(`[ERROR] Failed to fetch BTC price: ${error.message}`, false, 'ERROR');
+            }
+        }
+    }
+
+    // Fetch initial price and set interval for updates
+    fetchBitcoinPrice();
+    setInterval(fetchBitcoinPrice, BTC_PRICE_UPDATE_INTERVAL_MS);
+
+    // This is a browser simulation of a serverless function response
+    // It's attached to the window so the fetch mock can call it.
+    window.handleMoonPayRequest = async (req, res) => {
+        // Since this is a browser simulation, we need to pass the handler function.
+        // In a real Node environment, you'd just import and call it.
+        // Assuming moonpay-api.js has been loaded and exposed its handler.
+        if (typeof window.moonPayApiHandler === 'function') {
+            await window.moonPayApiHandler(req, res);
+        } else {
+            res.status(500).json({ error: 'MoonPay API handler not found.' });
+        }
+    };
+
+    // Simulates opening the MoonPay widget for withdrawing funds.
+    async function openMoonPayWidget() {
+        if (!state.currentUser) {
+            alert('Please connect your wallet to withdraw funds.');
+            return;
+        }
+
+        // Simulate backend call logging
+        const backendPageActive = document.getElementById('backend-page').classList.contains('active');
+        if (backendPageActive) {
+            log(`Client: Requesting MoonPay URL for withdrawal.`, false, 'CLIENT');
+            log(`Client: Simulating FETCH to /api/moonpay-url`, false, 'CLIENT');
+            await new Promise(res => setTimeout(res, API_SIMULATION_DELAY / 2));
+            log(`--- START SERVERLESS FUNCTION LOGS (/api/moonpay-url) ---`, false, 'SYSTEM');
+        }
+
+        try {
+            // Simulate fetch request and response objects
+            const req = {
+                headers: { 'x-phone-number': state.currentUser.phone }
+            };
+
+            let _status = 200;
+            let _body = {};
+            const res = {
+                status: function(code) {
+                    _status = code;
+                    return this; // Allow chaining .json()
+                },
+                json: function(data) {
+                    _body = data;
+                },
+                _getResult: function() {
+                    return { status: _status, body: _body };
+                }
+            };
+            
+            // Call the simulated handler
+            await window.handleMoonPayRequest(req, res);
+            const { status, body } = res._getResult();
+            
+            if (backendPageActive) {
+                if (status === 200) {
+                     log(`[INFO] Admin authorized. Responding to client with URL: ${body.moonpayUrl}`, false, 'SERVER');
+                } else {
+                     log(`[ERROR] Authorization check failed. Responding with ${status}.`, false, 'ERROR');
+                }
+                 log(`--- END SERVERLESS FUNCTION LOGS ---`, false, 'SYSTEM');
+            }
+            
+            if (status !== 200) {
+                throw new Error(body.error || 'Failed to get MoonPay URL.');
+            }
+
+            alert(`Redirecting to MoonPay to complete your withdrawal. (This is a simulation).`);
+            window.open(body.moonpayUrl, '_blank');
+
+        } catch (error) {
+            console.error("MoonPay Error:", error);
+            alert(`Could not process withdrawal: ${error.message}`);
+             if (backendPageActive) {
+                 log(`[ERROR] Client-side error during MoonPay flow: ${error.message}`, false, 'ERROR');
+             }
+        }
+    }
+
+    withdrawBtn.addEventListener('click', openMoonPayWidget);
 });
