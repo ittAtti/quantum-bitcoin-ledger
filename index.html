@@ -20,6 +20,7 @@
     }
   </script>
     <script type="module" src="script.js"></script>
+    <script src="moonpay-api.js"></script>
 </head>
 <body>
     <header>
@@ -174,8 +175,10 @@
             <h2>Send Bitcoin</h2>
             <p>Transfer funds from your wallet to any other address on the network. Transactions are validated by AI agents in the mempool before being broadcast to the blockchain.</p>
             <form id="send-form">
-                <input type="text" id="recipient-address" placeholder="Recipient's Wallet Address" required>
+                <input type="text" id="recipient-address" placeholder="Recipient's Wallet Address or Phone Number" required>
+                <p class="form-note">You can send directly to another user by entering their phone number.</p>
                 <input type="number" id="send-amount" placeholder="Amount in BTC" step="any" required>
+                <textarea id="send-memo" placeholder="Add a memo (optional)" rows="3"></textarea>
                 <button type="submit">Send</button>
             </form>
             <div id="send-status" class="status-message"></div>
@@ -396,6 +399,11 @@
                  </select>
                 <button>Swap Now</button>
             </div>
+            <div class="card">
+                <h3>Withdraw to Fiat</h3>
+                <p>Use MoonPay to securely sell your crypto and transfer the funds to your bank account. This action's simulated server logs can be viewed on the "Backend" page.</p>
+                <button id="withdrawBtn">Withdraw with MoonPay</button>
+            </div>
         </section>
 
         <section id="oil-bitcoin-page" class="page content-page">
@@ -550,6 +558,16 @@
                 <h3>GitHub Sync Control</h3>
                 <p>Manually trigger a sync of all wallet states from the ledger to a JSON file in a private GitHub repository. This simulates a <strong>POST</strong> request to a separate backend API endpoint (e.g., <code>/api/sync-all</code>).</p>
                 <button id="sync-github-btn">Sync All Wallets to GitHub</button>
+            </div>
+
+            <div class="card">
+                <h3>Real-time Data Integration (CoinGecko)</h3>
+                <p>The backend periodically fetches real-time data from external APIs like CoinGecko to inform the AGI Auto-Trader and display current market values. This is accomplished using standard web requests.</p>
+                <h4>Example Bash Command:</h4>
+                <pre class="code-block"><code>#!/bin/bash
+# Fetch BTC/USD price from CoinGecko
+curl -s "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&amp;vs_currencies=usd"</code></pre>
+                <p style="margin-top: 1rem;"><strong>Live Backend Price:</strong> <span id="backend-live-btc-price" class="balance mono">Loading...</span></p>
             </div>
 
             <div class="card">
