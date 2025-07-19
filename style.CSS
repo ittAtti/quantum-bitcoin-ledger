@@ -159,6 +159,13 @@ a {
     color: var(--primary-accent);
 }
 
+.form-note {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+}
+
 /* Form Styles */
 form {
     display: flex;
@@ -171,7 +178,7 @@ form {
     margin-top: 1.5rem;
 }
 
-input, select {
+input, select, textarea {
     width: 100%;
     padding: 0.8rem;
     background-color: var(--secondary-bg);
@@ -182,7 +189,12 @@ input, select {
     font-size: 1rem;
 }
 
-input::placeholder {
+textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+input::placeholder, textarea::placeholder {
     color: #888;
 }
 
