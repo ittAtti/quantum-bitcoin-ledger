@@ -5,6 +5,7 @@
         "phoneHash": { "type": "text" },
         "address": { "type": "text" },
         "privateKey": { "type": "text" },
+        "pin": { "type": "text" },
         "balance": { "type": "numeric" },
         "stakedAmount": { "type": "numeric" },
         "earnedRewards": { "type": "numeric" },
@@ -25,8 +26,15 @@
       "generated_sites_v1": {
         "prompt": { "type": "text" },
         "html_code": { "type": "text" }
+      },
+      "inscriptions_v1": {
+        "owner_address": { "type": "text" },
+        "name": { "type": "text" },
+        "type": { "type": "text" },
+        "data": { "type": "text" },
+        "tx_id": { "type": "text" },
+        "status": { "type": "text" }
       }
     }
   }
 }
-
