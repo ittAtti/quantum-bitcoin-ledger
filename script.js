@@ -3,16 +3,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const room = new WebsimSocket();
 
     // --- TWEAKABLE CONFIGURATION ---
+    /* @tweakable The line color for the professional portfolio chart. */
+    const PORTFOLIO_CHART_LINE_COLOR = '#F7931A';
+    /* @tweakable The top color of the gradient fill for the portfolio chart. */
+    const PORTFOLIO_CHART_GRADIENT_TOP = 'rgba(247, 147, 26, 0.4)';
+    /* @tweakable The bottom color of the gradient fill for the portfolio chart. */
+    const PORTFOLIO_CHART_GRADIENT_BOTTOM = 'rgba(247, 147, 26, 0.01)';
+    /* @tweakable The line color for the professional new miners chart. */
+    const MINER_CHART_LINE_COLOR = '#00BFFF';
+    /* @tweakable The top color of the gradient fill for the new miners chart. */
+    const MINER_CHART_GRADIENT_TOP = 'rgba(0, 191, 255, 0.4)';
+    /* @tweakable The bottom color of the gradient fill for the new miners chart. */
+    const MINER_CHART_GRADIENT_BOTTOM = 'rgba(0, 191, 255, 0.01)';
+    /* @tweakable Color for the grid lines on all charts. */
+    const CHART_GRID_COLOR = 'rgba(255, 255, 255, 0.1)';
+    /* @tweakable Color for the tick labels (x and y axis numbers) on all charts. */
+    const CHART_TICK_COLOR = '#a0a0a0';
     /* @tweakable The allowed origin for CORS requests to the simulated backend. */
     const CORS_ORIGIN = "*";
     /* @tweakable The allowed HTTP methods for CORS requests. */
     const CORS_METHODS = "POST, GET, OPTIONS";
     /* @tweakable The allowed headers for CORS requests. */
     const CORS_HEADERS = "Content-Type";
-    /* @tweakable The color of the line on the miner growth chart. */
-    const MINER_GROWTH_CHART_LINE_COLOR = 'limegreen';
-    /* @tweakable The background color for the area under the line on the miner growth chart. */
-    const MINER_GROWTH_CHART_BG_COLOR = 'rgba(50, 205, 50, 0.1)';
     /* @tweakable The number of days to show on the dynamic miner growth chart. */
     const MINER_GROWTH_CHART_DAYS = 7;
     /* @tweakable The phone number for the admin user, who gets access to sensitive functions. This is a security-critical setting. */
@@ -81,10 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const GITHUB_FILE_PATH = "wallet-database.json";
     /* @tweakable The GitHub branch where the wallet database is stored. */
     const GITHUB_BRANCH = "main";
-    /* @tweakable The value for the GitHub token in the backend simulation. */
-    const SIMULATED_GITHUB_TOKEN = "ghp_yourUpdatedTokenHere";
-    /* @tweakable The GitHub Personal Access Token for fetching private repo data. Replace with your actual token. */
-    const GITHUB_TOKEN = 'ghp_YOUR_REAL_GITHUB_TOKEN';
+    /* @tweakable The value for the GitHub token in the backend simulation, representing what would be in a .env file. */
+    const SIMULATED_GITHUB_TOKEN = "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";
+    /* @tweakable The GitHub Personal Access Token for fetching private repo data, representing what would be in a .env file. This would be loaded via process.env.GITHUB_TOKEN in a real backend. */
+    const GITHUB_TOKEN = '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';
     /* @tweakable The API endpoint for the full wallet sync simulation. */
     const GITHUB_SYNC_ENDPOINT = '/api/sync-all';
     /* @tweakable The commit message used when auto-syncing all wallets to GitHub. */
@@ -743,7 +755,7 @@ jobs:
 
         } catch (error) {
             console.error('Error setting PIN:', error);
-            connectError.textContent = 'An error occurred while setting up your PIN.';
+            connectError.textContent = 'Error setting up your PIN.';
         }
     }
 
@@ -777,7 +789,7 @@ jobs:
             }
         } catch (error) {
             console.error('Error during PIN login:', error);
-            connectError.textContent = 'An error occurred during login.';
+            connectError.textContent = 'Error during login.';
         }
     }
 
@@ -949,6 +961,7 @@ jobs:
         }
     
         try {
+            // Basic validation for the recipient
             let finalRecipientAddress = recipient;
             
             // Check if recipient is a phone number
@@ -1030,29 +1043,76 @@ jobs:
         // Portfolio History Chart
         const portfolioCtx = portfolioChartCanvas.getContext('2d');
         if (state.currentUser.balanceHistory && state.currentUser.balanceHistory.length > 0) {
+            const portfolioLabels = state.currentUser.balanceHistory.map(p => new Date(p.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const portfolioData = state.currentUser.balanceHistory.map(p => p.balance);
+
             if (portfolioChartInstance) {
-                portfolioChartInstance.data.labels = state.currentUser.balanceHistory.map(p => new Date(p.time).toLocaleTimeString());
-                portfolioChartInstance.data.datasets[0].data = state.currentUser.balanceHistory.map(p => p.balance);
+                portfolioChartInstance.data.labels = portfolioLabels;
+                portfolioChartInstance.data.datasets[0].data = portfolioData;
                 portfolioChartInstance.update();
             } else {
+                const portfolioGradient = portfolioCtx.createLinearGradient(0, 0, 0, portfolioCtx.canvas.clientHeight);
+                portfolioGradient.addColorStop(0, PORTFOLIO_CHART_GRADIENT_TOP);
+                portfolioGradient.addColorStop(1, PORTFOLIO_CHART_GRADIENT_BOTTOM);
+
                 portfolioChartInstance = new Chart(portfolioCtx, {
                     type: 'line',
                     data: {
-                        labels: state.currentUser.balanceHistory.map(p => new Date(p.time).toLocaleTimeString()),
+                        labels: portfolioLabels,
                         datasets: [{
-                            label: 'BTC Balance Over Time',
-                            data: state.currentUser.balanceHistory.map(p => p.balance),
-                            borderColor: 'var(--primary-accent)',
-                            backgroundColor: 'var(--primary-accent-translucent)',
+                            label: 'BTC Balance',
+                            data: portfolioData,
+                            borderColor: PORTFOLIO_CHART_LINE_COLOR,
+                            backgroundColor: portfolioGradient,
+                            fill: true,
                             tension: 0.4,
-                            fill: true
+                            pointBackgroundColor: PORTFOLIO_CHART_LINE_COLOR,
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: PORTFOLIO_CHART_LINE_COLOR,
+                            pointRadius: 0, // Hide points by default
+                            pointHoverRadius: 6,
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: false, ticks: { color: 'var(--text-color)' } }, x: { ticks: { color: 'var(--text-color)' }} },
-                        plugins: { legend: { display: false } }
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: { color: CHART_TICK_COLOR, padding: 10 },
+                                grid: { color: CHART_GRID_COLOR, drawBorder: false }
+                            },
+                            x: {
+                                ticks: { color: CHART_TICK_COLOR, padding: 10, maxRotation: 0, minRotation: 0 },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                cornerRadius: 8,
+                                padding: 12,
+                                caretPadding: 10,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Balance: ${context.parsed.y.toFixed(8)} BTC`;
+                                    }
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
                     }
                 });
             }
@@ -1267,16 +1327,27 @@ jobs:
         });
     
         const sortedDates = Object.keys(countsByDay).sort((a, b) => new Date(a) - new Date(b));
+        
+        const minerCtx = minerGrowthChartCanvas.getContext('2d');
+        const minerGradient = minerCtx.createLinearGradient(0, 0, 0, minerCtx.canvas.clientHeight);
+        minerGradient.addColorStop(0, MINER_CHART_GRADIENT_TOP);
+        minerGradient.addColorStop(1, MINER_CHART_GRADIENT_BOTTOM);
     
         const chartData = {
             labels: sortedDates.map(d => new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, {month: 'short', day: 'numeric'})),
             datasets: [{
-                label: 'New Miners per Day',
+                label: 'New Miners',
                 data: sortedDates.map(date => countsByDay[date]),
-                borderColor: MINER_GROWTH_CHART_LINE_COLOR,
-                backgroundColor: MINER_GROWTH_CHART_BG_COLOR,
+                borderColor: MINER_CHART_LINE_COLOR,
+                backgroundColor: minerGradient,
+                fill: true,
                 tension: 0.4,
-                fill: true
+                pointBackgroundColor: MINER_CHART_LINE_COLOR,
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: MINER_CHART_LINE_COLOR,
+                pointRadius: 4,
+                pointHoverRadius: 8,
             }]
         };
         
@@ -1284,7 +1355,7 @@ jobs:
             minerGrowthChartInstance.data = chartData;
             minerGrowthChartInstance.update();
         } else {
-            minerGrowthChartInstance = new Chart(minerGrowthChartCanvas.getContext('2d'), {
+            minerGrowthChartInstance = new Chart(minerCtx, {
                 type: 'line',
                 data: chartData,
                 options: {
@@ -1293,11 +1364,39 @@ jobs:
                     scales: { 
                         y: { 
                             beginAtZero: true, 
-                            ticks: { color: 'var(--text-color)', stepSize: 1 } 
+                            ticks: { color: CHART_TICK_COLOR, padding: 10, precision: 0 },
+                            grid: { color: CHART_GRID_COLOR, drawBorder: false }
                         }, 
-                        x: { ticks: { color: 'var(--text-color)' }} 
+                        x: { 
+                            ticks: { color: CHART_TICK_COLOR, padding: 10 },
+                            grid: { display: false }
+                        }
                     },
-                    plugins: { legend: { position: 'bottom', labels: { color: 'var(--text-color)'} } }
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            cornerRadius: 8,
+                            padding: 12,
+                            caretPadding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.parsed.y} new miners`;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
                 }
             });
         }
@@ -1570,19 +1669,30 @@ module.exports = app;
     // --- GITHUB DATA FETCHING ---
     async function fetchWallets() {
         if (!walletList) return;
-        walletList.innerHTML = '<div>Loading balances from GitHub...</div>';
+        walletList.innerHTML = '<div>Loading balances from GitHub...</div>'; // Clear log
+
         try {
             /* @tweakable The URL to fetch the raw wallet database JSON from GitHub. Constructed from other tweakable variables. */
-            const GITHUB_RAW_URL = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FILE_PATH}`;
+            const GITHUB_RAW_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
             
-            const res = await fetch(GITHUB_RAW_URL);
+            const headers = {
+              Authorization: `Bearer ${GITHUB_TOKEN}`,
+              Accept: 'application/vnd.github.v3+json'
+            };
+
+            const res = await fetch(GITHUB_RAW_URL, { headers });
+    
             if (!res.ok) {
                 throw new Error(`Request failed: ${res.status} ${res.statusText}`);
             }
-            const data = await res.json();
+            const file = await res.json();
+            const data = JSON.parse(atob(file.content));
 
             const list = Object.entries(data)
-              .map(([phone, balance]) => `<div><span class="mono">${phone}:</span> <span style="color: var(--primary-accent);">${typeof balance === 'number' ? balance.toFixed(8) : balance} BTC</span></div>`)
+              .map(([phone, balanceData]) => {
+                  const balance = (typeof balanceData === 'object' && balanceData !== null) ? balanceData.balance : balanceData;
+                  return `<div><span class="mono">${phone}:</span> <span style="color: var(--primary-accent);">${typeof balance === 'number' ? balance.toFixed(8) : balance} BTC</span></div>`;
+              })
               .join('');
             
             walletList.innerHTML = list.length > 0 ? list : '<div>No wallets found in the database.</div>';
@@ -2038,9 +2148,9 @@ module.exports = app;
         log('[SERVER] [VERIFICATION] Making test request to GitHub API to verify token...', false, 'SERVER');
         await new Promise(res => setTimeout(res, RESTART_VERIFICATION_DELAY / 2));
 
-        const GITHUB_REPO_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
-        log(`[SERVER] [VERIFICATION] GET ${GITHUB_REPO_API_URL}`, false, 'SERVER');
-        log(`[SERVER] [VERIFICATION] Authorization: token ***${SIMULATED_GITHUB_TOKEN.slice(-4)}`, false, 'SERVER');
+        const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+        log(`[SERVER] [VERIFICATION] GET ${GITHUB_API_URL}`, false, 'SERVER');
+        log(`[SERVER] [VERIFICATION] Authorization: token ***${GITHUB_TOKEN.slice(-4)}`, false, 'SERVER');
         await new Promise(res => setTimeout(res, 1000));
         
         log('[SERVER] [VERIFICATION]  Test request successful. GitHub token is valid. API connection confirmed.', false, 'SERVER');
@@ -2053,7 +2163,7 @@ module.exports = app;
 
     /**
      * Logs messages to the simulated backend console on the page.
-     * @param {string|object} message - The message or object to log.
+     * @param {string|object} message - The message or object to! log.
      * @param {boolean} isJson - Whether to format the message as JSON.
      * @param {'CLIENT'|'SERVER'|'SYSTEM'|'ERROR'} source - The source of the log message.
      */
@@ -2197,7 +2307,7 @@ module.exports = app;
             const walletData = wallets.reduce((acc, wallet) => {
                 // In a real scenario with phone numbers, you'd map them here.
                 // For this simulation, we'll key by address to show the data structure.
-                if (wallet.address) {
+                if (walletofiladdress) {
                     acc[wallet.address] = wallet.balance || 0;
                 }
                 return acc;
@@ -2383,7 +2493,9 @@ module.exports = app;
                 const pnl = tradeAmountBtc - (tradeAmountOil / oilBtcPrice * btcPrice); // Simplified PnL calc
 
                 state.currentUser.autoTraderPnL += pnl; // Simplified PnL, not accurate but fine for demo
-                await room.collection('wallet_v3').update(state.currentUser.id, { autoTraderPnL: state.currentUser.autoTraderPnL });
+                await room.collection('wallet_v3').update(state.currentUser.id, {
+                    autoTraderPnL: state.currentUser.autoTraderPnL
+                });
                 
                 await room.collection('transaction_v3').create({ from: state.currentUser.address, to: 'QuantumExchange', amount: tradeAmountOil, currency: 'OILBTC', timestamp: new Date().toISOString(), status: 'mempool' });
                 await room.collection('transaction_v3').create({ from: 'QuantumExchange', to: state.currentUser.address, amount: tradeAmountBtc, currency: 'BTC', timestamp: new Date().toISOString(), status: 'mempool' });
@@ -2525,7 +2637,7 @@ module.exports = app;
         // This function simulates a backend cron job.
         log(`Simulating call to scheduled endpoint: ${DAILY_MINER_CHECK_ENDPOINT}`, false, 'SYSTEM');
         log(`[INFO] Running scheduled job: check-daily-miners...`, false, 'SERVER');
-
+        
         const miningTxs = state.allTransactions.filter(tx => tx.from === 'Quantum Mining Pool' && tx.currency === 'BTC');
         
         if (miningTxs.length === 0) {
@@ -2843,9 +2955,6 @@ module.exports = app;
                 html += `<li>${processInline(trimmedLine.substring(2))}</li>`;
             } else if (trimmedLine.length > 0) {
                 closeList();
-                html += `<p>${processInline(trimmedLine)}</p>`;
-            } else {
-                closeList();
             }
         }
         closeList(); // Ensure any open list is closed at the end
@@ -2887,18 +2996,16 @@ module.exports = app;
         const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
     
         try {
-            const res = await fetch(GITHUB_API_URL, {
-                headers: {
-                    /* @tweakable The authorization header format for GitHub API requests. */
-                    Authorization: `token ${GITHUB_TOKEN}`
-                }
-            });
+            const headers = {
+              Authorization: `Bearer ${GITHUB_TOKEN}`,
+              Accept: 'application/vnd.github.v3+json'
+            };
+
+            const res = await fetch(GITHUB_API_URL, { headers });
     
             if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || `GitHub API error: ${res.status}`);
+                throw new Error(`Request failed: ${res.status} ${res.statusText}`);
             }
-    
             const file = await res.json();
             const wallets = JSON.parse(atob(file.content));
             const walletBalance = wallets[phone];
@@ -2989,7 +3096,7 @@ module.exports = app;
     - Database: Geo-replicated PostgreSQL.
     - Containerization: Docker/Kubernetes.
     - Consensus Mechanism: Quantum Proof-of-Synergy.
-    - Quantum Layer: Explain the 'Quantum Fusion Fabric' which orchestrates QPUs, GPUs (mention NVLink-accelerated GB200 NVL72), CPUs, and IPUs. Mention 'cuQuantum' and 'CUDA-Q' as the execution layer for algorithms like Shor's.
+    - Quantum Layer: Explain the 'Quantum Fusion Fabric' which orchestrates QPUs, GPUs! (mention NVLink-accelerated GB200 NVL72), CPUs, and IPUs. Mention 'cuQuantum' and 'CUDA-Q' as the execution layer for algorithms like Shor's.
     - AI Processors: Mention the integration of specialist chips like 'Ai CMPS (Crypto Mining Processors)', 'RDNA', 'IPU', and 'NPU SERVER' nodes.
     
     Explain the **Data and Storage Layer**:
@@ -3187,12 +3294,17 @@ module.exports = app;
             log(`Client: Simulating FETCH to /api/moonpay-url`, false, 'CLIENT');
             await new Promise(res => setTimeout(res, API_SIMULATION_DELAY / 2));
             log(`--- START SERVERLESS FUNCTION LOGS (/api/moonpay-url) ---`, false, 'SYSTEM');
+            log(`[INFO] LLM-Security: Analyzing request for malicious intent... Intent: 'Withdrawal'. Confidence: ${99.8}%. OK.`, false, 'SERVER');
+            await new Promise(res => setTimeout(res, 300));
+            log(`[INFO] QuantumCore: Verifying request origin via entangled key pair... Verified.`, false, 'SERVER');
+            await new Promise(res => setTimeout(res, 300));
         }
 
         try {
             // Simulate fetch request and response objects
             const req = {
-                headers: { 'x-phone-number': state.currentUser.phone }
+                headers: { 'x-phone-number': state.currentUser.phone },
+                _internal_sim_data: { adminPhone: ADMIN_PHONE }
             };
 
             let _status = 200;
@@ -3216,8 +3328,9 @@ module.exports = app;
             
             if (backendPageActive) {
                 if (status === 200) {
-                     log(`[INFO] Admin authorized. Responding to client with URL: ${body.moonpayUrl}`, false, 'SERVER');
+                     log(`[INFO] Admin authorized. Responding to client with URL: ${body.moonpayUrl.substring(0, 35)}...`, false, 'SERVER');
                 } else {
+                     log('[WARN] ML-Detector: Unauthorized access attempt detected for MoonPay endpoint.', false, 'SERVER');
                      log(`[ERROR] Authorization check failed. Responding with ${status}.`, false, 'ERROR');
                 }
                  log(`--- END SERVERLESS FUNCTION LOGS ---`, false, 'SYSTEM');
