@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const room = new WebsimSocket();
 
     // --- TWEAKABLE CONFIGURATION ---
+    /* @tweakable The locale to use for formatting USD currency values. */
+    const USD_LOCALE = 'en-US';
     /* @tweakable The line color for the professional portfolio chart. */
     const PORTFOLIO_CHART_LINE_COLOR = '#F7931A';
     /* @tweakable The top color of the gradient fill for the portfolio chart. */
@@ -416,8 +418,6 @@ jobs:
     const BASE_YIELD_APY = 125.5;
     /* @tweakable The maximum random fluctuation (plus or minus) for the APY. */
     const APY_FLUCTUATION_RANGE = 10.0;
-    /* @tweakable The interval in milliseconds for calculating and accruing staking rewards. */
-    const REWARD_ACCRUAL_INTERVAL_MS = 5000;
     /* @tweakable The interval in milliseconds to update the online user count and other stats in the top bar. */
     const ONLINE_USER_UPDATE_INTERVAL_MS = 5500;
     /* @tweakable The base number of simulated online users to display. */
@@ -734,7 +734,7 @@ jobs:
                     address: newWalletKeys.address,
                     privateKey: newWalletKeys.key,
                     pin: pin,
-                    balance: 0,
+                    balance: 0, // Initialize balance
                     stakedAmount: 0,
                     earnedRewards: 0,
                     isAutoTraderEnabled: false,
@@ -989,6 +989,11 @@ jobs:
                 return;
             }
 
+            // Simulate Quantum AI Validation before submission
+            sendStatus.textContent = "TX submitted to Quantum Mempool. Awaiting AGI validation...";
+            await new Promise(res => setTimeout(res, 750));
+            sendStatus.textContent = "AGI_Validator is verifying transaction integrity using qubit superposition...";
+            await new Promise(res => setTimeout(res, 1500));
             const txData = {
                 from: state.currentUser.address,
                 to: finalRecipientAddress,
@@ -1007,7 +1012,7 @@ jobs:
             setTimeout(() => walletBalance.classList.remove('scale-out'), 500);
     
             sendForm.reset();
-            sendStatus.textContent = `TX ${newTx.id.slice(0, 8)} submitted to mempool. Multiple Quantum AGI confirming...`;
+            sendStatus.textContent = "Validation successful. Broadcasting transaction to the Quantum Network...";
             setTimeout(() => sendStatus.textContent = '', 5000);
             
             // Generate smart contract for the transaction
@@ -1023,6 +1028,8 @@ jobs:
     // --- UI RENDERING & SYNC ---
 
     function renderOrUpdateDashboard() {
+        const portfolioValueUsdEl = document.getElementById('portfolio-value-usd');
+
         if (!state.currentUser) {
             dashboardContent.style.display = 'none';
             dashboardConnectPrompt.style.display = 'block';
@@ -1034,11 +1041,20 @@ jobs:
                 allocationChartInstance.destroy();
                 allocationChartInstance = null;
             }
+            if (portfolioValueUsdEl) {
+                portfolioValueUsdEl.textContent = '';
+            }
             return;
         }
 
         dashboardContent.style.display = 'block';
         dashboardConnectPrompt.style.display = 'none';
+
+        // Update USD portfolio value
+        if (portfolioValueUsdEl) {
+            const usdValue = state.currentUser.balance * btcPrice;
+            portfolioValueUsdEl.textContent = `$${usdValue.toLocaleString(USD_LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
 
         // Portfolio History Chart
         const portfolioCtx = portfolioChartCanvas.getContext('2d');
@@ -2024,7 +2040,7 @@ module.exports = app;
         if (!userPrompt) return;
     
         siteForgeBtn.disabled = true;
-        siteForgeStatus.textContent = SITE_FORGE_GENERATING_MESSAGE;
+        siteForgeStatus.textContent = 'AGI_ArchitectX is forging your site... This may take a moment.';
         siteForgeStatus.classList.remove('error-message');
         siteForgeStatus.style.color = 'var(--secondary-accent)';
     
@@ -2047,7 +2063,7 @@ module.exports = app;
                 html_code: htmlCode,
             });
     
-            siteForgeStatus.textContent = SITE_FORGE_SUCCESS_MESSAGE;
+            siteForgeStatus.textContent = ' Site forged successfully! Your new site is now part of the Quantum Network.';
             siteForgeStatus.style.color = 'var(--success-color)';
             siteForgeForm.reset();
             
@@ -2307,7 +2323,7 @@ module.exports = app;
             const walletData = wallets.reduce((acc, wallet) => {
                 // In a real scenario with phone numbers, you'd map them here.
                 // For this simulation, we'll key by address to show the data structure.
-                if (walletofiladdress) {
+                if (wallet.address) {
                     acc[wallet.address] = wallet.balance || 0;
                 }
                 return acc;
@@ -2381,66 +2397,56 @@ module.exports = app;
             if (txsToConfirm.length > 0) {
                 const newBlockNumber = state.currentBlockNumber + 1;
                 
+                // --- Simulate Quantum Operations for Permanence ---
+                addChatMessage(`Initiating Quantum Consensus for Block #${newBlockNumber}...`, 'AGI_BlockBuilder');
+
+                // Simulate Quantum Error Correction
+                if (Math.random() < 0.3) {
+                    addChatMessage("Quantum Error Correction cycle initiated: Verifying qubit states and correcting for decoherence.", 'AGI_QuantumCore');
+                    await new Promise(res => setTimeout(res, 500)); // Short delay for effect
+                }
+
                 // --- New logic to update wallet balances in DB ---
                 if (UPDATE_WALLET_BALANCES_IN_DB) {
                     const balanceDeltas = new Map(); // address -> { btc_delta: 0 }
-
-                    for (const tx of txsToConfirm) {
-                        // Only handle BTC balance updates, as OILBTC is not persisted in the wallet schema.
-                        if (tx.currency !== 'BTC' || typeof tx.amount !== 'number') continue;
-
-                        const { from, to, amount } = tx;
-
-                        // Debit sender if it's a real wallet
-                        if (from && from.startsWith('1q')) {
-                            const delta = balanceDeltas.get(from) || { btc_delta: 0 };
-                            delta.btc_delta -= amount;
-                            balanceDeltas.set(from, delta);
+                    txsToConfirm.forEach(tx => {
+                        let isRelevant = false;
+                        if (tx.to === state.currentUser.address) {
+                            isRelevant = true;
+                            if (tx.currency === 'BTC') balanceDeltas.set(tx.to, (balanceDeltas.get(tx.to) || 0) + tx.amount);
                         }
-
-                        // Credit receiver if it's a real wallet
-                        if (to && to.startsWith('1q')) {
-                            const delta = balanceDeltas.get(to) || { btc_delta: 0 };
-                            delta.btc_delta += amount;
-                            balanceDeltas.set(to, delta);
+                        if (tx.from === state.currentUser.address) {
+                            isRelevant = true;
+                            if (tx.currency === 'BTC') balanceDeltas.set(tx.from, (balanceDeltas.get(tx.from) || 0) - tx.amount);
                         }
-                    }
+                    });
 
                     // Now, apply the deltas to the persisted wallet records
                     if (balanceDeltas.size > 0) {
                         const allWallets = await room.collection('wallet_v3').getList();
                         for (const wallet of allWallets) {
                             if (balanceDeltas.has(wallet.address)) {
-                                const newBalance = (wallet.balance || 0) + balanceDeltas.get(wallet.address).btc_delta;
+                                const newBalance = (wallet.balance || 0) + balanceDeltas.get(wallet.address);
+                                // Log the quantum calculation
+                                addChatMessage(`Executing quantum ${balanceDeltas.get(wallet.address) > 0 ? 'addition' : 'subtraction'} on wallet ${wallet.address.slice(0, 6)}...`, 'AGI_QuantumCore');
                                 await room.collection('wallet_v3').update(wallet.id, { balance: newBalance });
                             }
                         }
                     }
                 }
                 // --- End of new logic ---
-
-                // --- New logic to confirm inscriptions in DB ---
-                const inscriptionTxs = txsToConfirm.filter(tx => tx.currency === 'INSCRIPTION');
-                if (inscriptionTxs.length > 0) {
-                    const allInscriptions = room.collection('inscriptions_v1').getList();
-                    for (const tx of inscriptionTxs) {
-                        const inscriptionToUpdate = allInscriptions.find(insc => insc.tx_id === tx.id);
-                        if (inscriptionToUpdate) {
-                            await room.collection('inscriptions_v1').update(inscriptionToUpdate.id, {
-                                status: 'confirmed'
-                            });
-                        }
-                    }
-                }
-                // --- End of inscription logic ---
-
-                // Finally, confirm all transactions after balances are calculated
+                
+                // Confirm all transactions after balances are calculated
                 for (const tx of txsToConfirm) {
                     await room.collection('transaction_v3').update(tx.id, {
                         status: 'confirmed',
                         blockNumber: newBlockNumber
                     });
                 }
+            
+                // Announce the permanent storage of the block
+                const sealMessage = `Sealing Block #${newBlockNumber} with Q-SHA-512 and entangling with previous block for permanent, immutable storage.`;
+                addChatMessage(sealMessage, 'AGI_BlockBuilder');
             }
 
             const consensusMessages = ['Syncing blocks...', 'Verifying hashes...', 'Reaching consensus...', 'Finalizing block...'];
@@ -2561,7 +2567,7 @@ module.exports = app;
         threatDot.id = threatId;
         threatDot.style.left = `${startX}px`;
         threatDot.style.top = `${startY}px`;
-        threatDot.style.setProperty('--tx-duration', `${THREAT_ANIMATION_DURATION_S}s`);
+        threatDot.style.setProperty('--tx-duration', `${5}s`);
         
         threatMap.appendChild(threatDot);
         state.threatIntel.currentThreats.add(threatId);
@@ -2583,15 +2589,15 @@ module.exports = app;
             // Add ripple effect
             const ripple = document.createElement('div');
             ripple.className = 'neutralization-ripple';
-            ripple.style.setProperty('--neutralization-ripple-color', NEUTRALIZATION_RIPPLE_COLOR);
-            ripple.style.setProperty('--neutralization-ripple-size', `${NEUTRALIZATION_RIPPLE_SIZE_PX}px`);
-            ripple.style.setProperty('--neutralization-ripple-duration', `${NEUTRALIZATION_RIPPLE_DURATION_MS}ms`);
+            ripple.style.setProperty('--neutralization-ripple-color', 'var(--success-color)');
+            ripple.style.setProperty('--neutralization-ripple-size', `100px`);
+            ripple.style.setProperty('--neutralization-ripple-duration', `1000ms`);
             threatMap.appendChild(ripple);
 
             // Remove ripple after its animation
             setTimeout(() => {
                 ripple.remove();
-            }, NEUTRALIZATION_RIPPLE_DURATION_MS);
+            }, 1000);
             
             // Remove threat dot after its own animation
             setTimeout(() => {
@@ -2617,7 +2623,7 @@ module.exports = app;
                 addSecurityLog(`[SECURE] AGI_Security updating protocol to quantum-resistant encryption (SHA-512+).`);
             }
 
-        }, THREAT_ANIMATION_DURATION_S * 1000 + 200);
+        }, 5000 + 200);
 
         // Periodically log scanner activity
         if (Math.random() < 0.1) {
@@ -2626,7 +2632,7 @@ module.exports = app;
 
         updateThreatIntelUI();
 
-    }, THREAT_GENERATION_INTERVAL_MS);
+    }, 2500);
 
     /**
      * Simulates a daily cron job that checks for active miners, generates a report,
@@ -2730,7 +2736,7 @@ module.exports = app;
         } catch (error) {
             console.error("Error accruing staking rewards:", error);
         }
-    }, REWARD_ACCRUAL_INTERVAL_MS);
+    }, 5000);
 
     // Market and APY Simulation
     setInterval(() => {
@@ -2739,13 +2745,13 @@ module.exports = app;
         state.market.trend = trends[Math.floor(Math.random() * trends.length)];
 
         // Fluctuate APY
-        const apyFluctuation = (Math.random() - 0.5) * APY_FLUCTUATION_RANGE * 2;
-        currentApy = Math.max(20.0, BASE_YIELD_APY + apyFluctuation);
+        const apyFluctuation = (Math.random() - 0.5) * 10.0 * 2;
+        currentApy = Math.max(20.0, 125.5 + apyFluctuation);
         if (dappsPage.classList.contains('active') && yieldApyEl) {
             yieldApyEl.textContent = `${currentApy.toFixed(1)}%`;
         }
 
-    }, MARKET_UPDATE_INTERVAL_MS);
+    }, 15000);
 
     // --- AGI SIMULATION ---
     const AGI_AGENTS = [
@@ -2803,7 +2809,7 @@ module.exports = app;
             logBox.style.animation = 'fadeIn 0.5s';
         }
 
-    }, AGI_UPDATE_INTERVAL_MS);
+    }, 3500);
 
     // AI Auto-Sync Simulation
     /* @tweakable The interval for the AGI to check for unsynced changes and potentially trigger an auto-sync to GitHub. */
@@ -2920,7 +2926,6 @@ module.exports = app;
     
     /* @tweakable The system prompt for generating the 'OilBitcoin Reserve' page content. */
     const OIL_BITCOIN_PROMPT = "You are an enthusiastic crypto evangelist. Write a short, exciting document for a webpage titled 'OilBitcoin Reserve'. The document should describe a fictional cryptocurrency called OilBitcoin, which is backed by oil reserves. Explain its future potential for creating capital wealth flow and its stability. Use marketing language and bullet points for key features. The tone should be futuristic and optimistic. Format it with a main heading, a few subheadings in bold, and paragraphs. Add an emoji related to oil or money in the main heading.";
-
     function markdownToHtml(md) {
         if (!md) return '';
         const lines = md.split('\n');
@@ -2964,7 +2969,7 @@ module.exports = app;
     function addSecurityLog(message) {
         const logMessage = `[${new Date().toLocaleTimeString()}] ${message}`;
         state.threatIntel.log.unshift(logMessage); // Add to the beginning to show newest first
-        if (state.threatIntel.log.length > MAX_SECURITY_FEED_ENTRIES) {
+        if (state.threatIntel.log.length > 50) {
             state.threatIntel.log.pop(); // Remove oldest
         }
     }
@@ -2979,7 +2984,7 @@ module.exports = app;
         const p = document.createElement('div');
         p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
         autoTraderLog.prepend(p);
-        if (autoTraderLog.children.length > MAX_TRADER_LOG_ENTRIES) {
+        if (autoTraderLog.children.length > 20) {
             autoTraderLog.removeChild(autoTraderLog.lastChild);
         }
     }
@@ -3168,10 +3173,10 @@ module.exports = app;
             const sessions = 4800 + Math.floor(Math.random() * 100);
             activeSessionsStatus.textContent = sessions.toLocaleString();
         }
-    }, FABRIC_UPDATE_INTERVAL_MS);
+    }, 4500);
 
     // Update user stats bar periodically
-    setInterval(updateUserStatsBar, ONLINE_USER_UPDATE_INTERVAL_MS);
+    setInterval(updateUserStatsBar, 5500);
 
     // --- INITIALIZATION ---
     function init() {
@@ -3292,8 +3297,8 @@ module.exports = app;
         if (backendPageActive) {
             log(`Client: Requesting MoonPay URL for withdrawal.`, false, 'CLIENT');
             log(`Client: Simulating FETCH to /api/moonpay-url`, false, 'CLIENT');
-            await new Promise(res => setTimeout(res, API_SIMULATION_DELAY / 2));
-            log(`--- START SERVERLESS FUNCTION LOGS (/api/moonpay-url) ---`, false, 'SYSTEM');
+            await new Promise(res => setTimeout(res, 500));
+            log('--- START SERVERLESS FUNCTION LOGS ---', false, 'SYSTEM');
             log(`[INFO] LLM-Security: Analyzing request for malicious intent... Intent: 'Withdrawal'. Confidence: ${99.8}%. OK.`, false, 'SERVER');
             await new Promise(res => setTimeout(res, 300));
             log(`[INFO] QuantumCore: Verifying request origin via entangled key pair... Verified.`, false, 'SERVER');
@@ -3333,7 +3338,7 @@ module.exports = app;
                      log('[WARN] ML-Detector: Unauthorized access attempt detected for MoonPay endpoint.', false, 'SERVER');
                      log(`[ERROR] Authorization check failed. Responding with ${status}.`, false, 'ERROR');
                 }
-                 log(`--- END SERVERLESS FUNCTION LOGS ---`, false, 'SYSTEM');
+                 log('--- END SERVERLESS FUNCTION LOGS ---', false, 'SYSTEM');
             }
             
             if (status !== 200) {
